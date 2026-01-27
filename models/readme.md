@@ -4,7 +4,7 @@ Each file name is as such:
 
 <code>prof.\<line>.\<geometry>.\<Mdot>.\<Tmax>.\<Inclination>.0</code>
 
-- line: which line is modeled (Hα = h23, Hβ = h24, CaII = Ca)
+- line: which line is modeled (Hα = h23, Hβ = h24, CaIIK = ca15)
 - geometry: the geometry of the disk, this is of the form GXX, where X is between 01-36. The geometries are parametrized as the inner radius of the magnetosphere and the width of the magnetosphere in units of R<sub>*</sub>.
 - Mdot: the accretion rate (M<sub>$\odot$</sub>/yr), this is of the form MXX, where X is between 01-13.
 - Tmax: the maxmimum temperature (Kelvin), this is of the form TXX, where X is between 01-16,
