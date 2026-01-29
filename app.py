@@ -49,6 +49,8 @@ abundances = {'.Ca':r"Solar",
             }
 
 # temps_ = temps[mdots[md]['tmin']:mdots[md]['tmax']]
+
+# --------- Sidebar for parameter selection ---------- #
 with st.sidebar:
     st.header('Model Parameter Selection')
     line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()))
@@ -72,6 +74,8 @@ with st.sidebar:
             abund = ''
         st.form_submit_button('Submit my picks')
 
+
+# --------- find the indices for file naming ---------- #
 tmax_idx = np.where(temps_list == Tmax)[0][0]+1
 
 # print(Rin)
@@ -88,28 +92,6 @@ print(file_name)
 def load_data(file_name):
     data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
     return data
-
-
-# def read_mod_profile(ID):
-
-#     try:
-#         model_data = ascii.read(f'{path_mod}/prof.h23.{ID}.0', names=['velocity', 'flux'])
-#     except FileNotFoundError:
-#         print('file model not found')
-#         return -999.0, -999.0, -999.0
-    
-#     vel = model_data['velocity'].data
-#     fnu = model_data['flux'].data
-
-#     v1,v2 = vel[0], vel[-1]
-#     f1,f2 = fnu[0],fnu[-1]
-
-#     m = (f2-f1)/(v2-v1)
-#     f_cont = m * (vel-v1) + f1
-    
-#     Nflux = fnu/f_cont
-    
-#     return vel, Nflux 
 
 
 data = load_data(file_name)
@@ -133,6 +115,9 @@ if normalize_flux:
     flux_label = 'Normalized Fν'
 else:
     flux_label = r'Fν (erg/s/cm²/Hz)'
+
+
+# --------- plotting the models ---------- #
 
 chart1 = alt.Chart(data.to_pandas()).mark_point().encode(
     x=alt.X('Velocity', title='Velocity (km/s)'),
@@ -160,12 +145,16 @@ chart = chart.interactive()
 # zoom_pan = alt.selection_interval(bind='scales')
 st.altair_chart(chart, use_container_width=True)
 
+# --------- let user download data ---------- #
+
 st.download_button(
     label="Download data as CSV",
     data=pandas_data.to_csv(index=False).encode('utf-8'),
     file_name=f'{file_name}.csv',
     mime='text/csv',
 )
+
+# --------- footer ---------- #
 
 with st.container():
 
