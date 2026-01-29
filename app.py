@@ -49,26 +49,28 @@ abundances = {'.Ca':r"Solar",
             }
 
 # temps_ = temps[mdots[md]['tmin']:mdots[md]['tmax']]
-line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()))
-Mdot = st.selectbox('Select Mdot', mdot_list)
+with st.sidebar:
+    st.header('Model Parameter Selection')
+    line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()))
+    Mdot = st.selectbox('Select Mdot', mdot_list)
 mdot_idx = np.where(mdot_list  == Mdot)
 
 
+with st.sidebar:
+    with st.form("my_form"):
+        st.write("Parameter selection")
 
-with st.form("my_form"):
-    st.write("Parameter selection")
+        Tmax = st.selectbox('Select Tmax', temps_list[mdots[f'M{mdot_idx[0][0]+1:02d}']['tmin']:mdots[f'M{mdot_idx[0][0]+1:02d}']['tmax']])
+        Rin = st.selectbox('Select Rin', mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique())
+        width = st.selectbox('Select width', mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique())
 
-    Tmax = st.selectbox('Select Tmax', temps_list[mdots[f'M{mdot_idx[0][0]+1:02d}']['tmin']:mdots[f'M{mdot_idx[0][0]+1:02d}']['tmax']])
-    Rin = st.selectbox('Select Rin', mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique())
-    width = st.selectbox('Select width', mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique())
+        inc= st.selectbox('Select inclination', [15,30,45,60,75])
 
-    inc= st.selectbox('Select inclination', [15,30,45,60,75])
-
-    if line == 'ca15':
-        abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()))
-    else:
-        abund = ''
-    st.form_submit_button('Submit my picks')
+        if line == 'ca15':
+            abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()))
+        else:
+            abund = ''
+        st.form_submit_button('Submit my picks')
 
 tmax_idx = np.where(temps_list == Tmax)[0][0]+1
 
