@@ -121,6 +121,8 @@ f_cont = m * (vel-v1) + f1
 
 Nflux = fnu/f_cont
 
+pandas_data = data.to_pandas()
+pandas_data['Nflux'] = Nflux
 
 normalize_flux = st.checkbox('Normalize Flux', value=False)
 if normalize_flux:
@@ -155,6 +157,13 @@ chart = chart.interactive()
 
 # zoom_pan = alt.selection_interval(bind='scales')
 st.altair_chart(chart, use_container_width=True)
+
+st.download_button(
+    label="Download data as CSV",
+    data=pandas_data.to_csv(index=False).encode('utf-8'),
+    file_name=f'{file_name}.csv',
+    mime='text/csv',
+)
 
 with st.container():
 
