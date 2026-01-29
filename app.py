@@ -2,8 +2,8 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-# from astropy.io import ascii
-
+from astropy.io import ascii
+import altair as alt
 
 st.title("Magneto Models")
 
@@ -81,3 +81,77 @@ print(geo_idx)
 
 file_name = f'prof.{line}{abund}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(inc)}.0'
 print(file_name)
+
+@st.cache_data
+def load_data(file_name):
+    data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
+    return data
+
+
+# def read_mod_profile(ID):
+
+#     try:
+#         model_data = ascii.read(f'{path_mod}/prof.h23.{ID}.0', names=['velocity', 'flux'])
+#     except FileNotFoundError:
+#         print('file model not found')
+#         return -999.0, -999.0, -999.0
+    
+#     vel = model_data['velocity'].data
+#     fnu = model_data['flux'].data
+
+#     v1,v2 = vel[0], vel[-1]
+#     f1,f2 = fnu[0],fnu[-1]
+
+#     m = (f2-f1)/(v2-v1)
+#     f_cont = m * (vel-v1) + f1
+    
+#     Nflux = fnu/f_cont
+    
+#     return vel, Nflux 
+
+
+data = load_data(file_name)
+vel = data['Velocity'].data
+fnu = data['Flux'].data
+v1,v2 = vel[0], vel[-1]
+f1,f2 = fnu[0],fnu[-1]
+
+m = (f2-f1)/(v2-v1)
+f_cont = m * (vel-v1) + f1
+
+Nflux = fnu/f_cont
+
+
+normalize_flux = st.checkbox('Normalize Flux', value=False)
+if normalize_flux:
+    # data['Flux'] = data['Flux']/np.max(data['Flux'])
+    data['Flux'] = Nflux
+    flux_label = 'Normalized Fν'
+else:
+    flux_label = r'Fν (erg/s/cm²/Hz)'
+
+chart1 = alt.Chart(data.to_pandas()).mark_point().encode(
+    x=alt.X('Velocity', title='Velocity (km/s)'),
+    y=alt.Y('Flux', title=flux_label),
+    ).properties(
+    title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+    width=700,
+    height=400,
+    # tooltip=['Velocity','Flux']
+    )   
+
+chart2 = alt.Chart(data.to_pandas()).mark_line().encode(
+    x=alt.X('Velocity', title='Velocity (km/s)'),
+    y=alt.Y('Flux', title=flux_label),
+    ).properties(
+    title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+    width=700,
+    height=400,
+
+    )   
+
+chart = chart1 + chart2
+chart = chart.interactive()
+
+# zoom_pan = alt.selection_interval(bind='scales')
+st.altair_chart(chart, use_container_width=True)
