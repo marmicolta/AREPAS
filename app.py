@@ -155,3 +155,8 @@ chart = chart.interactive()
 
 # zoom_pan = alt.selection_interval(bind='scales')
 st.altair_chart(chart, use_container_width=True)
+
+with st.container():
+
+    st.markdown("Made with :heart: and :sparkles: by Marbely Micolta & Katya Gozman using Streamlit :streamlit:, python, Altair, and Pandas.")    
+    st.markdown("Model References: [Hartmann et al. (1994)](https://ui.adsabs.harvard.edu/abs/1994ApJ...426..669H/abstract), [Muzerolle et al. (2001)](https://ui.adsabs.harvard.edu/abs/2001ApJ...550..944M/abstract)")
