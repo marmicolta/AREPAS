@@ -128,7 +128,7 @@ with st.sidebar:
         st.session_state.abund = None
         # st.form_submit_button('Submit my picks')
     # with dfColumns[7]:
-    spectral_type = st.selectbox('Select Spectral Type', ['K2','K5','K7','M1','M3','M5'], key='spectral_type')
+    spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type')
     #                     disabled=True)
     st.button('Submit', on_click=add_df)
 
@@ -154,10 +154,11 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 def get_model_file(fname,spt):
     
     # Check if file exists in cache
-    local_path = CACHE_DIR / fname
+    local_path = CACHE_DIR / f"{spt}.{fname}"
     # If not, download it from dropbox
     if not local_path.exists():
-        
+        print(spt)
+        print(f"/Profiles/{spt}profiles/{fname}")
         download_from_dropbox(f"/Profiles/{spt}profiles/{fname}", local_path)
 
     return local_path
@@ -174,7 +175,7 @@ def download_from_dropbox(remote_path, local_path):
 
 
 @st.cache_data
-def load_data(file_name):
+def load_data(file_name,spectral_type):
     # data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
     data = ascii.read(get_model_file(file_name,spectral_type), names=['Velocity','Flux'])
 
@@ -182,7 +183,7 @@ def load_data(file_name):
 
 
 # Load the data
-data = load_data(file_name)
+data = load_data(file_name,spectral_type)
 vel = data['Velocity'].data
 fnu = data['Flux'].data
 v1,v2 = vel[0], vel[-1]
