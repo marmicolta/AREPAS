@@ -5,6 +5,27 @@ import matplotlib.pyplot as plt
 from astropy.io import ascii
 import altair as alt
 
+from dotenv import load_dotenv
+import dropbox
+import os
+import shutil
+
+# --------- Dropbox API setup ---------- #
+# .env should be in gitignore but really not gonna make Nuria figure out APIs
+
+load_dotenv()  # reads .env automatically. 
+DROPBOX_TOKEN = os.getenv("DROPBOX_TOKEN")
+
+if DROPBOX_TOKEN is None:
+    raise RuntimeError(
+        "DROPBOX_TOKEN not found. "
+        "Create a .env file with your Dropbox access token."
+    )
+
+dbx = dropbox.Dropbox(DROPBOX_TOKEN)
+
+# --------- Page Title ---------- #
+
 st.title("Magneto Models")
 
 st.write("This displays the velocity vs flux data from magnetospheric accretion models.")
@@ -106,7 +127,7 @@ with st.sidebar:
         st.session_state.abund = None
         # st.form_submit_button('Submit my picks')
     # with dfColumns[7]:
-    spectral_type = st.selectbox('Select Spectral Type', ['K7','M0','M1','M2','M3','M4','M5'], key='spectral_type')
+    spectral_type = st.selectbox('Select Spectral Type', ['K2','K5','K7','M1','M3','M5'], key='spectral_type')
     #                     disabled=True)
     st.button('Submit', on_click=add_df)
 
@@ -123,12 +144,43 @@ print(geo_idx)
 file_name = f'prof.{line}{abund}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(inc)}.0'
 print(file_name)
 
+
+#--------- Get data model from dropbox ---------- #
+CACHE_DIR = Path.home() / ".cache" / "magnetomodels"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Function to get model file from dropbox
+def get_model_file(fname,spt):
+    
+    # Check if file exists in cache
+    local_path = CACHE_DIR / fname
+    # If not, download it from dropbox
+    if not local_path.exists():
+        
+        download_from_dropbox(f"/Profiles/{spt}profiles/{fname}", local_path)
+
+    return local_path
+
+# Function to download file from dropbox and save to local path
+def download_from_dropbox(remote_path, local_path):
+    print(f"Downloading {remote_path} from Dropbox...")
+
+    md, res = dbx.files_download(remote_path)
+
+    with open(local_path, "wb") as f:
+        f.write(res.content)
+
+
+
 @st.cache_data
 def load_data(file_name):
-    data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
+    # data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
+    data = ascii.read(get_model_file(file_name,spectral_type), names=['Velocity','Flux'])
+
     return data
 
 
+# Load the data
 data = load_data(file_name)
 vel = data['Velocity'].data
 fnu = data['Flux'].data
@@ -195,3 +247,10 @@ with st.container():
 
     st.markdown("Made with :heart: and :sparkles: by Marbely Micolta & Katya Gozman using Streamlit :streamlit:, python, Altair, and Pandas.")    
     st.markdown("Model References: [Hartmann et al. (1994)](https://ui.adsabs.harvard.edu/abs/1994ApJ...426..669H/abstract), [Muzerolle et al. (2001)](https://ui.adsabs.harvard.edu/abs/2001ApJ...550..944M/abstract)")
+
+
+# --------- Clear cache button ---------- #
+st.sidebar.header("Clear Cache")
+if st.sidebar.button("Clear Cached Data"):
+    
+    shutil.rmtree(CACHE_DIR)  # deletes the folder and all contents
