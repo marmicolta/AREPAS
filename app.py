@@ -50,30 +50,65 @@ abundances = {'.Ca':r"Solar",
 
 # temps_ = temps[mdots[md]['tmin']:mdots[md]['tmax']]
 
+# Create an empty dataframe on first page load, will skip on page reloads
+if 'data' not in st.session_state:
+    data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
+    st.session_state.data = data
+
+# Show current data
+st.dataframe(st.session_state.data)
+
+# Function to append non-form inputs into dataframe
+def add_df():
+    row = pd.DataFrame({'line':[st.session_state.line],
+            'Mdot':[st.session_state.Mdot],
+            'Tmax':[st.session_state.Tmax],
+            'Rin':[st.session_state.Rin],
+            'Width':[st.session_state.Width],
+            'Inclination':[st.session_state.Inclination],
+            'Abundance':[st.session_state.abund],
+            "Spectral Type":[st.session_state.spectral_type]})
+    st.session_state.data = pd.concat([st.session_state.data, row])
+
+
+
 # --------- Sidebar for parameter selection ---------- #
 with st.sidebar:
+    # Inputs created outside of a form (allows computing col4 for preview)
+    # dfColumns = st.columns(8)
     st.header('Model Parameter Selection')
-    line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()))
-    Mdot = st.selectbox('Select Mdot', mdot_list)
-mdot_idx = np.where(mdot_list  == Mdot)
+    # with dfColumns[0]:
+    line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()), key='line')
+    # with dfColumns[1]:
+    Mdot = st.selectbox('Select Mdot', mdot_list, key='Mdot')
+    mdot_idx = np.where(mdot_list  == Mdot)
 
 
-with st.sidebar:
-    with st.form("my_form"):
-        st.write("Parameter selection")
 
-        Tmax = st.selectbox('Select Tmax', temps_list[mdots[f'M{mdot_idx[0][0]+1:02d}']['tmin']:mdots[f'M{mdot_idx[0][0]+1:02d}']['tmax']])
-        Rin = st.selectbox('Select Rin', mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique())
-        width = st.selectbox('Select width', mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique())
+    # with st.form("my_form"):
+    # st.write("Parameter selection")
+    # with dfColumns[2]:
+    Tmax = st.selectbox('Select Tmax', temps_list[mdots[f'M{mdot_idx[0][0]+1:02d}']['tmin']:mdots[f'M{mdot_idx[0][0]+1:02d}']['tmax']] , key='Tmax')
+    # with dfColumns[3]:
+    Rin = st.selectbox('Select Rin', mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique(), key='Rin')
+    # with dfColumns[4]:
+    width = st.selectbox('Select width', mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique(), key='Width')
+    # with dfColumns[5]:
+    inc= st.selectbox('Select inclination', [15,30,45,60,75], key='Inclination')
 
-        inc= st.selectbox('Select inclination', [15,30,45,60,75])
-
-        if line == 'ca15':
-            abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()))
-        else:
-            abund = ''
-        st.form_submit_button('Submit my picks')
-
+    if line == 'ca15':
+        # with dfColumns[6]:
+        abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()), key='abund')
+    else:
+        # with dfColumns[6]:
+        # abund = st.selectbox('Select Ca abundance',options=['h'], key='abund', disabled=True, placeholder='')
+        abund= ""
+        st.session_state.abund = None
+        # st.form_submit_button('Submit my picks')
+    # with dfColumns[7]:
+    spectral_type = st.selectbox('Select Spectral Type', ['K7','M0','M1','M2','M3','M4','M5'], key='spectral_type')
+    #                     disabled=True)
+    st.button('Submit', on_click=add_df)
 
 # --------- find the indices for file naming ---------- #
 tmax_idx = np.where(temps_list == Tmax)[0][0]+1
