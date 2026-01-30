@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from astropy.io import ascii
 import altair as alt
 
+from pathlib import Path
 from dotenv import load_dotenv
 import dropbox
 import os
