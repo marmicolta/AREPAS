@@ -90,7 +90,18 @@ def add_df():
             'Inclination':[st.session_state.Inclination],
             'Abundance':[st.session_state.abund],
             "Spectral Type":[st.session_state.spectral_type]})
-    st.session_state.data = pd.concat([st.session_state.data, row])
+    # Check if the row already exists in the dataframe
+    exists = ((st.session_state.data['line'] == st.session_state.line) &
+              (st.session_state.data['Mdot'] == st.session_state.Mdot) &
+              (st.session_state.data['Tmax'] == st.session_state.Tmax) &
+              (st.session_state.data['Rin'] == st.session_state.Rin) &
+              (st.session_state.data['Width'] == st.session_state.Width) &
+              (st.session_state.data['Inclination'] == st.session_state.Inclination) &
+              (st.session_state.data['Abundance'] == st.session_state.abund) &
+              (st.session_state.data['Spectral Type'] == st.session_state.spectral_type)).any()
+    if not exists:
+        st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
+    # st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
 
 
@@ -120,30 +131,21 @@ with st.sidebar:
 
     if line == 'ca15':
         # with dfColumns[6]:
-        abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()), key='abund')
+        print(abundances.keys())
+        if st.session_state.get('abund') is None:
+            st.session_state.abund = list(abundances.keys())[0]
+        abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()), key='abund', placeholder='Ca')
     else:
         # with dfColumns[6]:
         # abund = st.selectbox('Select Ca abundance',options=['h'], key='abund', disabled=True, placeholder='')
         abund= ""
-        st.session_state.abund = None
+        st.session_state.abund = ""
         # st.form_submit_button('Submit my picks')
     # with dfColumns[7]:
     spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type')
     #                     disabled=True)
     st.button('Submit', on_click=add_df)
 
-# --------- find the indices for file naming ---------- #
-tmax_idx = np.where(temps_list == Tmax)[0][0]+1
-
-# print(Rin)
-# print(width)
-#We wanr the index where the mags_id row has the combination of Ri and width
-geo_idx = mag_ids[ (mag_ids['Rin'] == Rin) & (mag_ids['Width'] == width)]['ID'].values[0]
-print(geo_idx)
-
-
-file_name = f'prof.{line}{abund}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(inc)}.0'
-print(file_name)
 
 
 #--------- Get data model from dropbox ---------- #
@@ -163,6 +165,7 @@ def get_model_file(fname,spt):
 
     return local_path
 
+
 # Function to download file from dropbox and save to local path
 def download_from_dropbox(remote_path, local_path):
     print(f"Downloading {remote_path} from Dropbox...")
@@ -174,6 +177,7 @@ def download_from_dropbox(remote_path, local_path):
 
 
 
+
 @st.cache_data
 def load_data(file_name,spectral_type):
     # data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
@@ -181,67 +185,111 @@ def load_data(file_name,spectral_type):
 
     return data
 
+# --------- find the indices for file naming ---------- #
+# Store each profile's data in a list for overplotting
+# if 'profiles' not in st.session_state:
+#     st.session_state.profiles = []
 
-# Load the data
-data = load_data(file_name,spectral_type)
-vel = data['Velocity'].data
-fnu = data['Flux'].data
-v1,v2 = vel[0], vel[-1]
-f1,f2 = fnu[0],fnu[-1]
-
-m = (f2-f1)/(v2-v1)
-f_cont = m * (vel-v1) + f1
-
-Nflux = fnu/f_cont
-
-pandas_data = data.to_pandas()
-pandas_data['Nflux'] = Nflux
-
+# get list of filenames from pandas dataframe
+# print(st.session_state.data.keys())
 normalize_flux = st.checkbox('Normalize Flux', value=False)
-if normalize_flux:
-    # data['Flux'] = data['Flux']/np.max(data['Flux'])
-    data['Flux'] = Nflux
-    flux_label = 'Normalized Fν'
-else:
-    flux_label = r'Fν (erg/s/cm²/Hz)'
+files_to_plot = []
+for row in st.session_state.data.itertuples():
+    # print(row)
+    line = row.line
+    Mdot = row.Mdot
+    Tmax = row.Tmax
+    Rin = row.Rin
+    width = row.Width
+    inc = row.Inclination
+    abund = row.Abundance
+    if abund==None:
+        abund = ""
+    spectral_type = row._8
+    
 
 
+    tmax_idx = np.where(temps_list == Tmax)[0][0]+1
+
+    # print(Rin)
+    # print(width)
+    #We wanr the index where the mags_id row has the combination of Ri and width
+    geo_idx = mag_ids[ (mag_ids['Rin'] == Rin) & (mag_ids['Width'] == width)]['ID'].values[0]
+    print(geo_idx)
+
+
+    file_name = f'prof.{line}{abund}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(inc)}.0'
+    print(file_name)
+    files_to_plot.append((file_name, spectral_type))
+
+    # Load the data
+    profdata = load_data(file_name,spectral_type)
+    vel = profdata['Velocity'].data
+    fnu = profdata['Flux'].data
+    v1,v2 = vel[0], vel[-1]
+    f1,f2 = fnu[0],fnu[-1]
+
+    # m = (f2-f1)/(v2-v1)
+    # f_cont = m * (vel-v1) + f1
+
+    # Nflux = fnu/f_cont
+
+    # pandas_data = data.to_pandas()
+    # pandas_data['Nflux'] = Nflux
+
+    
+    # if normalize_flux:
+    #     # data['Flux'] = data['Flux']/np.max(data['Flux'])
+    #     data['Flux'] = Nflux
+    #     flux_label = 'Normalized Fν'
+    # else:
+    #     flux_label = r'Fν (erg/s/cm²/Hz)'
+
+
+
+    # # profile_df = pandas_data[['Velocity', 'Flux']].copy()
+    # pandas_data['Label'] = f"{lines[line]}, Mdot={Mdot:.2e}, Tmax={Tmax}, Rin={Rin}, Width={width}, Inc={inc}, Spt={spectral_type}"
+    # print(profile_df)
+    # st.session_state.profiles.append(profile_df)
+
+
+# print(st.session_state.profiles)
 # --------- plotting the models ---------- #
 
-chart1 = alt.Chart(data.to_pandas()).mark_point().encode(
-    x=alt.X('Velocity', title='Velocity (km/s)'),
-    y=alt.Y('Flux', title=flux_label),
-    ).properties(
-    title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
-    width=700,
-    height=400,
-    # tooltip=['Velocity','Flux']
-    )   
+# chart1 = alt.Chart(data).mark_point().encode(
+#     x=alt.X('Velocity', title='Velocity (km/s)'),
+#     y=alt.Y('Flux', title=flux_label),
+#     ).properties(
+#     title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+#     width=700,
+#     height=400,
+#     # tooltip=['Velocity','Flux']
+#     )   
 
-chart2 = alt.Chart(data.to_pandas()).mark_line().encode(
-    x=alt.X('Velocity', title='Velocity (km/s)'),
-    y=alt.Y('Flux', title=flux_label),
-    ).properties(
-    title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
-    width=700,
-    height=400,
+# chart2 = alt.Chart(data).mark_line().encode(
+#     x=alt.X('Velocity', title='Velocity (km/s)'),
+#     y=alt.Y('Flux', title=flux_label),
+#     ).properties(
+#     title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+#     width=700,
+#     height=400,
 
-    )   
+#     )   
 
-chart = chart1 + chart2
-chart = chart.interactive()
+# chart = chart1 + chart2
+# chart = chart.interactive()
 
-# zoom_pan = alt.selection_interval(bind='scales')
-st.altair_chart(chart, use_container_width=True)
+# # zoom_pan = alt.selection_interval(bind='scales')
+# st.altair_chart(chart, width='stretch')
 
 # --------- let user download data ---------- #
 
-st.download_button(
-    label="Download data as CSV",
-    data=pandas_data.to_csv(index=False).encode('utf-8'),
-    file_name=f'{file_name}.csv',
-    mime='text/csv',
-)
+# st.download_button(
+#     label="Download data as CSV",
+#     data=pandas_data.to_csv(index=False).encode('utf-8'),
+#     file_name=f'{file_name}.csv',
+#     mime='text/csv',
+# )
 
 # --------- footer ---------- #
 
