@@ -82,6 +82,10 @@ if 'data' not in st.session_state:
     data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
     st.session_state.data = data
 
+if 'all_data' not in st.session_state:
+    all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+    st.session_state.all_data = all_data
+
 # Show current data
 st.dataframe(st.session_state.data)
 
@@ -106,6 +110,8 @@ def add_df():
               (st.session_state.data['Spectral Type'] == st.session_state.spectral_type)).any()
     if not exists:
         st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
+
+        get_flux_data()
     # st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
 
@@ -197,100 +203,115 @@ def load_data(file_name,spectral_type):
 
 # get list of filenames from pandas dataframe
 # print(st.session_state.data.keys())
+# all_data = pd.DataFrame()
+# st.dataframe(st.session_state.data)
+# st.dataframe(st.session_state.all_data)
 normalize_flux = st.checkbox('Normalize Flux', value=False)
-all_data = pd.DataFrame()
-for row in st.session_state.data.itertuples():
-    # print(row)
-    line = row.line
-    Mdot = row.Mdot
-    Tmax = row.Tmax
-    Rin = row.Rin
-    width = row.Width
-    inc = row.Inclination
-    abund = row.Abundance
-    if abund==None:
-        abund = ""
-    spectral_type = row._8
-    
+
+def get_flux_data():
+    for row in st.session_state.data.itertuples():
+        # print(row)
+        # line = row.line
+        # Mdot = row.Mdot
+        # Tmax = row.Tmax
+        # Rin = row.Rin
+        # width = row.Width
+        # inc = row.Inclination
+        abundance = row.Abundance
+        if abundance==None:
+            abundance = ""
+        spectype = row._8
+        mdot_idx = np.where(mdot_list  == row.Mdot)
+        tmax_idx = np.where(temps_list == row.Tmax)[0][0]+1
+
+        # print(Rin)
+        # print(width)
+        #We wanr the index where the mags_id row has the combination of Ri and width
+        geo_idx = mag_ids[ (mag_ids['Rin'] == row.Rin) & (mag_ids['Width'] == row.Width)]['ID'].values[0]
+        print(geo_idx)
 
 
-    tmax_idx = np.where(temps_list == Tmax)[0][0]+1
+        file_name = f'prof.{row.line}{abundance}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(row.Inclination)}.0'
+        print(file_name)
+        # files_to_plot.append((file_name, spectral_type))
 
-    # print(Rin)
-    # print(width)
-    #We wanr the index where the mags_id row has the combination of Ri and width
-    geo_idx = mag_ids[ (mag_ids['Rin'] == Rin) & (mag_ids['Width'] == width)]['ID'].values[0]
-    print(geo_idx)
+        # Load the data
+        profdata = load_data(file_name,spectype)
+        vel = profdata['Velocity'].data
+        fnu = profdata['Flux'].data
+        v1,v2 = vel[0], vel[-1]
+        f1,f2 = fnu[0],fnu[-1]
 
+        m = (f2-f1)/(v2-v1)
+        f_cont = m * (vel-v1) + f1
 
-    file_name = f'prof.{line}{abund}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(inc)}.0'
-    print(file_name)
-    # files_to_plot.append((file_name, spectral_type))
+        Nflux = fnu/f_cont
 
-    # Load the data
-    profdata = load_data(file_name,spectral_type)
-    vel = profdata['Velocity'].data
-    fnu = profdata['Flux'].data
-    v1,v2 = vel[0], vel[-1]
-    f1,f2 = fnu[0],fnu[-1]
+        pandas_data = profdata.to_pandas()
+        pandas_data['Nflux'] = Nflux
 
-    m = (f2-f1)/(v2-v1)
-    f_cont = m * (vel-v1) + f1
-
-    Nflux = fnu/f_cont
-
-    pandas_data = profdata.to_pandas()
-    pandas_data['Nflux'] = Nflux
-
-    
-    if normalize_flux:
-        # data['Flux'] = data['Flux']/np.max(data['Flux'])
-        pandas_data['Flux'] = Nflux
-        flux_label = 'Normalized Fν'
-    else:
-        flux_label = r'Fν (erg/s/cm²/Hz)'
+        # print(normalize_flux)
+        # if normalize_flux:
+            # data['Flux'] = data['Flux']/np.max(data['Flux'])
+        # pandas_data['NFlux'] = Nflux
+        #     flux_label = 'Normalized Fν'
+        # else:
+        #     flux_label = r'Fν (erg/s/cm²/Hz)'
 
 
 
-    # profile_df = pandas_data[['Velocity', 'Flux']].copy()
-    pandas_data['Label'] = f"{lines[line]}, Mdot={Mdot:.2e}, Tmax={Tmax}, Rin={Rin}, Width={width}, Inc={inc}, Spt={spectral_type}"
+        # profile_df = pandas_data[['Velocity', 'Flux']].copy()
+        pandas_data['Label'] = f"{lines[row.line]}, Mdot={row.Mdot:.2e}, Tmax={row.Tmax}, Rin={row.Rin}, Width={row.Width}, Inc={row.Inclination}, Spt={spectype}, Abund={abundance}"
+        # st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
-    all_data = pd.concat([all_data, pandas_data], ignore_index=True)
-    # print(profile_df)
-    # st.session_state.profiles.append(profile_df)
+        st.session_state.all_data = pd.concat([st.session_state.all_data, pandas_data], ignore_index=True)
+        # print(profile_df)
+        # st.session_state.profiles.append(profile_df)
 
-# st.dataframe(all_data)
+# st.dataframe(st.session_state.all_data)
+
+if normalize_flux:
+    flux_label = 'Normalized Fν'
+    flux_param = 'Nflux'
+else:
+    flux_label = r'Fν (erg/s/cm²/Hz)'
+    flux_param = 'Flux'
 
 # print(st.session_state.profiles)
 # --------- plotting the models ---------- #
 
-if not all_data.empty:
+if not st.session_state.all_data.empty:
 
-    chart1 = alt.Chart(all_data).mark_point().encode(
+    selection = alt.selection_point(fields=['Label'], bind='legend')
+    selection_zoom = alt.selection_interval(bind='scales', empty='all')
+
+    chart1 = alt.Chart(st.session_state.all_data).mark_point().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
-        y=alt.Y('Flux', title=flux_label),
+        y=alt.Y(flux_param, title=flux_label),
         color='Label:N',
-        tooltip=['Velocity','Flux','Label']
+        tooltip=['Velocity', flux_param, 'Label'],
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
         ).properties(
-        title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+        # title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
         width=700,
         height=400,
         # tooltip=['Velocity','Flux']
-        )   
+        )
 
-    chart2 = alt.Chart(all_data).mark_line().encode(
+    chart2 = alt.Chart(st.session_state.all_data).mark_line().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
-        y=alt.Y('Flux', title=flux_label),
+        y=alt.Y(flux_param, title=flux_label),
         color='Label:N',
+        opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
         ).properties(
-        title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+        # title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
         width=700,
         height=400,
 
-        )   
+        )
 
     chart = chart1 + chart2
-    chart = chart.interactive()
+    chart = chart.add_params(selection, selection_zoom)
 
     # zoom_pan = alt.selection_interval(bind='scales')
     st.altair_chart(chart, width='stretch')
