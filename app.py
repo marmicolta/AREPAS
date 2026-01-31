@@ -211,7 +211,7 @@ normalize_flux = st.checkbox('Normalize Flux', value=False)
 def get_flux_data():
     rows = event.selection.rows
     filtered_df = st.session_state.data.iloc[rows]
-    st.dataframe(filtered_df)
+    # st.dataframe(filtered_df)
     st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
     # for row in st.session_state.data.itertuples():
     for row in filtered_df.itertuples():
