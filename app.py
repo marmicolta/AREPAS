@@ -15,15 +15,20 @@ import shutil
 # .env should be in gitignore but really not gonna make Nuria figure out APIs
 
 load_dotenv()  # reads .env automatically. 
-DROPBOX_TOKEN = os.getenv("DROPBOX_TOKEN")
+# DROPBOX_TOKEN = os.getenv("DROPBOX_TOKEN")
 
-if DROPBOX_TOKEN is None:
-    raise RuntimeError(
-        "DROPBOX_TOKEN not found. "
-        "Create a .env file with your Dropbox access token."
-    )
+# if DROPBOX_TOKEN is None:
+#     raise RuntimeError(
+#         "DROPBOX_TOKEN not found. "
+#         "Create a .env file with your Dropbox access token."
+#     )
 
-dbx = dropbox.Dropbox(DROPBOX_TOKEN)
+# dbx = dropbox.Dropbox(DROPBOX_TOKEN)
+dbx = dropbox.Dropbox(
+    oauth2_refresh_token=os.environ["DROPBOX_REFRESH_TOKEN"],
+    app_key=os.environ["DROPBOX_APP_KEY"],
+    app_secret=os.environ["DROPBOX_APP_SECRET"],
+)
 
 # --------- Page Title ---------- #
 
