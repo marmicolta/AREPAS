@@ -82,12 +82,10 @@ if 'data' not in st.session_state:
     data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
     st.session_state.data = data
 
-if 'all_data' not in st.session_state:
-    all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
-    st.session_state.all_data = all_data
+# if 'all_data' not in st.session_state:
+#     all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+#     st.session_state.all_data = all_data
 
-# Show current data
-st.dataframe(st.session_state.data)
 
 # Function to append non-form inputs into dataframe
 def add_df():
@@ -111,7 +109,7 @@ def add_df():
     if not exists:
         st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
-        get_flux_data()
+        # get_flux_data()
     # st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
 
@@ -157,7 +155,9 @@ with st.sidebar:
     #                     disabled=True)
     st.button('Submit', on_click=add_df)
 
-
+# Show current data
+# df = st.dataframe(st.session_state.data, width='content', on_select='rerun', selection_mode='multi-row')
+event = st.dataframe(st.session_state.data, width='stretch', on_select='rerun', selection_mode='multi-row')
 
 #--------- Get data model from dropbox ---------- #
 CACHE_DIR = Path.home() / ".cache" / "magnetomodels"
@@ -209,7 +209,12 @@ def load_data(file_name,spectral_type):
 normalize_flux = st.checkbox('Normalize Flux', value=False)
 
 def get_flux_data():
-    for row in st.session_state.data.itertuples():
+    rows = event.selection.rows
+    filtered_df = st.session_state.data.iloc[rows]
+    st.dataframe(filtered_df)
+    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+    # for row in st.session_state.data.itertuples():
+    for row in filtered_df.itertuples():
         # print(row)
         # line = row.line
         # Mdot = row.Mdot
@@ -269,6 +274,7 @@ def get_flux_data():
         # st.session_state.profiles.append(profile_df)
 
 # st.dataframe(st.session_state.all_data)
+get_flux_data()
 
 if normalize_flux:
     flux_label = 'Normalized Fν'
@@ -276,6 +282,8 @@ if normalize_flux:
 else:
     flux_label = r'Fν (erg/s/cm²/Hz)'
     flux_param = 'Flux'
+
+print(st.session_state.all_data)
 
 # print(st.session_state.profiles)
 # --------- plotting the models ---------- #
@@ -314,7 +322,7 @@ if not st.session_state.all_data.empty:
     chart = chart.add_params(selection, selection_zoom)
 
     # zoom_pan = alt.selection_interval(bind='scales')
-    st.altair_chart(chart, width='stretch')
+    st.altair_chart(chart, width='stretch', )
 
 # --------- let user download data ---------- #
 
