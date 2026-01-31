@@ -82,6 +82,12 @@ if 'data' not in st.session_state:
     data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
     st.session_state.data = data
 
+# --- button to clear the dataframe ---
+def clear_data():
+    st.session_state.data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
+    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+st.button('Clear Data', on_click=clear_data)
+
 # if 'all_data' not in st.session_state:
 #     all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
 #     st.session_state.all_data = all_data
