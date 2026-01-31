@@ -198,7 +198,7 @@ def load_data(file_name,spectral_type):
 # get list of filenames from pandas dataframe
 # print(st.session_state.data.keys())
 normalize_flux = st.checkbox('Normalize Flux', value=False)
-files_to_plot = []
+all_data = pd.DataFrame()
 for row in st.session_state.data.itertuples():
     # print(row)
     line = row.line
@@ -225,7 +225,7 @@ for row in st.session_state.data.itertuples():
 
     file_name = f'prof.{line}{abund}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(inc)}.0'
     print(file_name)
-    files_to_plot.append((file_name, spectral_type))
+    # files_to_plot.append((file_name, spectral_type))
 
     # Load the data
     profdata = load_data(file_name,spectral_type)
@@ -234,58 +234,66 @@ for row in st.session_state.data.itertuples():
     v1,v2 = vel[0], vel[-1]
     f1,f2 = fnu[0],fnu[-1]
 
-    # m = (f2-f1)/(v2-v1)
-    # f_cont = m * (vel-v1) + f1
+    m = (f2-f1)/(v2-v1)
+    f_cont = m * (vel-v1) + f1
 
-    # Nflux = fnu/f_cont
+    Nflux = fnu/f_cont
 
-    # pandas_data = data.to_pandas()
-    # pandas_data['Nflux'] = Nflux
+    pandas_data = profdata.to_pandas()
+    pandas_data['Nflux'] = Nflux
 
     
-    # if normalize_flux:
-    #     # data['Flux'] = data['Flux']/np.max(data['Flux'])
-    #     data['Flux'] = Nflux
-    #     flux_label = 'Normalized Fν'
-    # else:
-    #     flux_label = r'Fν (erg/s/cm²/Hz)'
+    if normalize_flux:
+        # data['Flux'] = data['Flux']/np.max(data['Flux'])
+        pandas_data['Flux'] = Nflux
+        flux_label = 'Normalized Fν'
+    else:
+        flux_label = r'Fν (erg/s/cm²/Hz)'
 
 
 
-    # # profile_df = pandas_data[['Velocity', 'Flux']].copy()
-    # pandas_data['Label'] = f"{lines[line]}, Mdot={Mdot:.2e}, Tmax={Tmax}, Rin={Rin}, Width={width}, Inc={inc}, Spt={spectral_type}"
+    # profile_df = pandas_data[['Velocity', 'Flux']].copy()
+    pandas_data['Label'] = f"{lines[line]}, Mdot={Mdot:.2e}, Tmax={Tmax}, Rin={Rin}, Width={width}, Inc={inc}, Spt={spectral_type}"
+
+    all_data = pd.concat([all_data, pandas_data], ignore_index=True)
     # print(profile_df)
     # st.session_state.profiles.append(profile_df)
 
+# st.dataframe(all_data)
 
 # print(st.session_state.profiles)
 # --------- plotting the models ---------- #
 
-# chart1 = alt.Chart(data).mark_point().encode(
-#     x=alt.X('Velocity', title='Velocity (km/s)'),
-#     y=alt.Y('Flux', title=flux_label),
-#     ).properties(
-#     title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
-#     width=700,
-#     height=400,
-#     # tooltip=['Velocity','Flux']
-#     )   
+if not all_data.empty:
 
-# chart2 = alt.Chart(data).mark_line().encode(
-#     x=alt.X('Velocity', title='Velocity (km/s)'),
-#     y=alt.Y('Flux', title=flux_label),
-#     ).properties(
-#     title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
-#     width=700,
-#     height=400,
+    chart1 = alt.Chart(all_data).mark_point().encode(
+        x=alt.X('Velocity', title='Velocity (km/s)'),
+        y=alt.Y('Flux', title=flux_label),
+        color='Label:N',
+        tooltip=['Velocity','Flux','Label']
+        ).properties(
+        title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+        width=700,
+        height=400,
+        # tooltip=['Velocity','Flux']
+        )   
 
-#     )   
+    chart2 = alt.Chart(all_data).mark_line().encode(
+        x=alt.X('Velocity', title='Velocity (km/s)'),
+        y=alt.Y('Flux', title=flux_label),
+        color='Label:N',
+        ).properties(
+        title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
+        width=700,
+        height=400,
 
-# chart = chart1 + chart2
-# chart = chart.interactive()
+        )   
 
-# # zoom_pan = alt.selection_interval(bind='scales')
-# st.altair_chart(chart, width='stretch')
+    chart = chart1 + chart2
+    chart = chart.interactive()
+
+    # zoom_pan = alt.selection_interval(bind='scales')
+    st.altair_chart(chart, width='stretch')
 
 # --------- let user download data ---------- #
 
