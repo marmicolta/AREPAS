@@ -11,6 +11,7 @@ import dropbox
 import os
 import shutil
 
+
 # --------- Dropbox API setup ---------- #
 # .env should be in gitignore but really not gonna make Nuria figure out APIs
 
@@ -31,10 +32,26 @@ dbx = dropbox.Dropbox(
 )
 
 # --------- Page Title ---------- #
+st.set_page_config(layout="wide")
 
 st.title("Magneto Models")
 
 st.write("This displays the velocity vs flux data from magnetospheric accretion models.")
+
+with st.expander("How to use this app"):
+    st.write('''
+    This app allows users to explore magnetospheric accretion line profile models for different spectral lines, 
+             mass accretion rates, maximum temperatures, disk geometries, inclinations, and abundances. 
+             Select model parameters from the sidebar to visualize how they affect the line profiles. 
+             Multiple models can be overplotted for comparison. Data files are fetched from Dropbox 
+             as needed and cached locally for faster access. 
+    ''')
+    st.markdown("### Instructions:")
+    st.markdown("1. Use the sidebar to select model parameters")
+    st.markdown("2. Click 'Submit' to add the selected model to the dataframe. \n")
+    st.markdown("3. Select *one* row in the data table by clicking the checkbox in the first column to visualize the corresponding line profiles. Select *all* rows by clicking the checkbox in the header of the first column. \n")
+    st.markdown("4. Use the 'Clear Data' button to reset selections.""")
+    st.markdown("The plot has an interactive legend and zooming capabilities. Click on legend entries to toggle visibility of specific models. Click and drag on the plot area to zoom in on regions of interest. Double-click to reset the zoom.")
 
 @st.cache_data
 def load_ids():
@@ -86,7 +103,7 @@ if 'data' not in st.session_state:
 def clear_data():
     st.session_state.data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
     st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
-st.button('Clear Data', on_click=clear_data)
+st.button('Clear Data', on_click=clear_data, help='Clears all selected model parameters and plotted data.')
 
 # if 'all_data' not in st.session_state:
 #     all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
@@ -126,9 +143,9 @@ with st.sidebar:
     # dfColumns = st.columns(8)
     st.header('Model Parameter Selection')
     # with dfColumns[0]:
-    line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()), key='line')
+    line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()), key='line', help='Which spectral line to model.')
     # with dfColumns[1]:
-    Mdot = st.selectbox('Select Mdot', mdot_list, key='Mdot')
+    Mdot = st.selectbox('Select Mdot', mdot_list, key='Mdot', help='The mass accretion rate in solar masses per year.')
     mdot_idx = np.where(mdot_list  == Mdot)
 
 
@@ -136,20 +153,19 @@ with st.sidebar:
     # with st.form("my_form"):
     # st.write("Parameter selection")
     # with dfColumns[2]:
-    Tmax = st.selectbox('Select Tmax', temps_list[mdots[f'M{mdot_idx[0][0]+1:02d}']['tmin']:mdots[f'M{mdot_idx[0][0]+1:02d}']['tmax']] , key='Tmax')
+    Tmax = st.selectbox('Select Tmax', temps_list[mdots[f'M{mdot_idx[0][0]+1:02d}']['tmin']:mdots[f'M{mdot_idx[0][0]+1:02d}']['tmax']] , key='Tmax', help='The maximum temperature in Kelvin.')
     # with dfColumns[3]:
-    Rin = st.selectbox('Select Rin', mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique(), key='Rin')
+    Rin = st.selectbox('Select Rin', mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique(), key='Rin', help='The inner radius of the disk in stellar radii.')
     # with dfColumns[4]:
-    width = st.selectbox('Select width', mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique(), key='Width')
+    width = st.selectbox('Select width', mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique(), key='Width', help='The width of the disk in stellar radii.')
     # with dfColumns[5]:
-    inc= st.selectbox('Select inclination', [15,30,45,60,75], key='Inclination')
-
+    inc= st.selectbox('Select inclination', [15,30,45,60,75], key='Inclination', help='The inclination angle of the disk in degrees.')
     if line == 'ca15':
         # with dfColumns[6]:
-        print(abundances.keys())
+        # print(abundances.keys())
         if st.session_state.get('abund') is None:
             st.session_state.abund = list(abundances.keys())[0]
-        abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()), key='abund', placeholder='Ca')
+        abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()), key='abund', placeholder='Ca', help='The Calcium abundance.', )
     else:
         # with dfColumns[6]:
         # abund = st.selectbox('Select Ca abundance',options=['h'], key='abund', disabled=True, placeholder='')
@@ -157,7 +173,7 @@ with st.sidebar:
         st.session_state.abund = ""
         # st.form_submit_button('Submit my picks')
     # with dfColumns[7]:
-    spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type')
+    spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type', help='The spectral type of the star.')
     #                     disabled=True)
     st.button('Submit', on_click=add_df)
 
@@ -176,7 +192,7 @@ def get_model_file(fname,spt):
     local_path = CACHE_DIR / f"{spt}.{fname}"
     # If not, download it from dropbox
     if not local_path.exists():
-        print(spt)
+        # print(spt)
         print(f"/Profiles/{spt}profiles/{fname}")
         download_from_dropbox(f"/Profiles/{spt}profiles/{fname}", local_path)
 
@@ -212,8 +228,8 @@ def load_data(file_name,spectral_type):
 # all_data = pd.DataFrame()
 # st.dataframe(st.session_state.data)
 # st.dataframe(st.session_state.all_data)
-normalize_flux = st.checkbox('Normalize Flux', value=False)
-
+normalize_flux = st.checkbox('Normalize Flux', value=False, help='If checked, the flux will be normalized so the continuum level has a value of 1.')
+hide_legend = st.checkbox('Hide Legend', value=False, help='If checked, the legend will be hidden from the plot.')
 def get_flux_data():
     rows = event.selection.rows
     filtered_df = st.session_state.data.iloc[rows]
@@ -239,11 +255,11 @@ def get_flux_data():
         # print(width)
         #We wanr the index where the mags_id row has the combination of Ri and width
         geo_idx = mag_ids[ (mag_ids['Rin'] == row.Rin) & (mag_ids['Width'] == row.Width)]['ID'].values[0]
-        print(geo_idx)
+        # print(geo_idx)
 
 
         file_name = f'prof.{row.line}{abundance}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(row.Inclination)}.0'
-        print(file_name)
+        # print(file_name)
         # files_to_plot.append((file_name, spectral_type))
 
         # Load the data
@@ -272,7 +288,10 @@ def get_flux_data():
 
 
         # profile_df = pandas_data[['Velocity', 'Flux']].copy()
-        pandas_data['Label'] = f"{lines[row.line]}, Mdot={row.Mdot:.2e}, Tmax={row.Tmax}, Rin={row.Rin}, Width={row.Width}, Inc={row.Inclination}, Spt={spectype}, Abund={abundance}"
+        # pandas_data['Label'] = f"{lines[row.line]}, Mdot={row.Mdot:.2e}, Tmax={row.Tmax}, Rin={row.Rin}, Width={row.Width}, Inc={row.Inclination}, Spt={spectype}, Abund={abundance}"
+        pandas_data['Label'] = f"{lines[row.line]}|{row.Mdot:.2f}|{row.Tmax:.0f}|{row.Rin}|{row.Width}|{row.Inclination:.0f}|{spectype}|{abundance}"
+
+        pandas_data['Label'] = pandas_data['Label'].str.replace('.Ca',' Ca Solar').str.replace('_0p5',' 50% Solar').str.replace('_0p1',' 10% Solar').str.replace('_0p01',' 1% Solar')
         # st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
         st.session_state.all_data = pd.concat([st.session_state.all_data, pandas_data], ignore_index=True)
@@ -289,7 +308,7 @@ else:
     flux_label = r'Fν (erg/s/cm²/Hz)'
     flux_param = 'Flux'
 
-print(st.session_state.all_data)
+# print(st.session_state.all_data)
 
 # print(st.session_state.profiles)
 # --------- plotting the models ---------- #
@@ -298,11 +317,15 @@ if not st.session_state.all_data.empty:
 
     selection = alt.selection_point(fields=['Label'], bind='legend')
     selection_zoom = alt.selection_interval(bind='scales', empty='all')
-
+    if hide_legend:
+        # selection = alt.selection_point(fields=['Label'], bind=None)
+        legend=None
+    else:
+        legend=alt.Legend(title="Models", labelLimit=400, direction="vertical", orient="right", columns=1)
     chart1 = alt.Chart(st.session_state.all_data).mark_point().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
         y=alt.Y(flux_param, title=flux_label),
-        color='Label:N',
+        color=alt.Color('Label:N', legend=legend),
         tooltip=['Velocity', flux_param, 'Label'],
         opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
         ).properties(
@@ -361,6 +384,6 @@ with st.container():
 
 # --------- Clear cache button ---------- #
 st.sidebar.header("Clear Cache")
-if st.sidebar.button("Clear Cached Data"):
+if st.sidebar.button("Clear Cached Data", help="Clears all cached data files from your local machine."):
     
     shutil.rmtree(CACHE_DIR)  # deletes the folder and all contents
