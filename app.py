@@ -386,8 +386,8 @@ with st.container():
 
 
 
-# --------- Clear cache button ---------- #
-st.sidebar.header("Clear Cache")
-if st.sidebar.button("Clear Cached Data", help="Clears all cached data files from your local machine."):
+# # --------- Clear cache button ---------- #
+# st.sidebar.header("Clear Cache")
+# if st.sidebar.button("Clear Cached Data", help="Clears all cached data files from your local machine."):
     
-    shutil.rmtree(CACHE_DIR)  # deletes the folder and all contents
+#     shutil.rmtree(CACHE_DIR)  # deletes the folder and all contents
