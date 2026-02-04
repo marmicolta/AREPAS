@@ -83,7 +83,14 @@ mdot_list = mag_ids['Mdot'][~np.isnan(mag_ids['Mdot'])].unique()
 
 lines = {'h23':r"Hα",
          'h24':r"Hβ", 
+         'h25':r"Hγ",
+         'h35':r"Paβ",
+         'h36':r"Paγ",
+         'h37':r"Paδ",
+         'h47':r"Brγ",
          'ca15':r"Ca II K",
+         'ca25':r"Ca II 8498",
+         'ca35':r"Ca II 8542",
          }
 
 abundances = {'.Ca':r"Solar",
@@ -140,39 +147,35 @@ def add_df():
 # --------- Sidebar for parameter selection ---------- #
 with st.sidebar:
     # Inputs created outside of a form (allows computing col4 for preview)
-    # dfColumns = st.columns(8)
+
     st.header('Model Parameter Selection')
-    # with dfColumns[0]:
+
     line = st.selectbox('Select line', format_func=lambda x: lines[x], options=list(lines.keys()), key='line', help='Which spectral line to model.')
-    # with dfColumns[1]:
+
     Mdot = st.selectbox('Select Mdot', mdot_list, key='Mdot', help='The mass accretion rate in solar masses per year.')
     mdot_idx = np.where(mdot_list  == Mdot)
 
 
-
-    # with st.form("my_form"):
-    # st.write("Parameter selection")
-    # with dfColumns[2]:
     Tmax = st.selectbox('Select Tmax', temps_list[mdots[f'M{mdot_idx[0][0]+1:02d}']['tmin']:mdots[f'M{mdot_idx[0][0]+1:02d}']['tmax']] , key='Tmax', help='The maximum temperature in Kelvin.')
-    # with dfColumns[3]:
-    Rin = st.selectbox('Select Rin', mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique(), key='Rin', help='The inner radius of the disk in stellar radii.')
-    # with dfColumns[4]:
-    width = st.selectbox('Select width', mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique(), key='Width', help='The width of the disk in stellar radii.')
-    # with dfColumns[5]:
+    
+    Rin = st.selectbox('Select Rin', np.sort(mag_ids['Rin'][~np.isnan(mag_ids['Rin'])].unique()), key='Rin', help='The inner radius of the disk in stellar radii.')
+
+    width = st.selectbox('Select width', np.sort(mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique()), key='Width', help='The width of the disk in stellar radii.')
+
     inc= st.selectbox('Select inclination', [15,30,45,60,75], key='Inclination', help='The inclination angle of the disk in degrees.')
     if line == 'ca15':
-        # with dfColumns[6]:
+
         # print(abundances.keys())
         if st.session_state.get('abund') is None:
             st.session_state.abund = list(abundances.keys())[0]
         abund = st.selectbox('Select Ca abundance',format_func=lambda x: abundances[x], options=list(abundances.keys()), key='abund', placeholder='Ca', help='The Calcium abundance.', )
     else:
-        # with dfColumns[6]:
+
         # abund = st.selectbox('Select Ca abundance',options=['h'], key='abund', disabled=True, placeholder='')
         abund= ""
         st.session_state.abund = ""
         # st.form_submit_button('Submit my picks')
-    # with dfColumns[7]:
+
     spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type', help='The spectral type of the star.')
     #                     disabled=True)
     st.button('Submit', on_click=add_df)
@@ -186,35 +189,36 @@ CACHE_DIR = Path.home() / ".cache" / "magnetomodels"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Function to get model file from dropbox
-def get_model_file(fname,spt):
+def get_model_file(fname,spt,line):
     
-    # Check if file exists in cache
-    local_path = CACHE_DIR / f"{spt}.{fname}"
-    # If not, download it from dropbox
-    if not local_path.exists():
-        # print(spt)
-        print(f"/Profiles/{spt}profiles/{fname}")
-        download_from_dropbox(f"/Profiles/{spt}profiles/{fname}", local_path)
+    # # Check if file exists in cache
+    # local_path = CACHE_DIR / f"{spt}.{fname}"
+    # # If not, download it from dropbox
+    # if not local_path.exists():
+    #     # print(spt)
+    #     print(f"/Profiles/{spt}profiles/{fname}")
+    #     download_from_dropbox(f"/Profiles/{spt}profiles/{fname}", local_path)
+    url = f"https://raw.githubusercontent.com/marmicolta/data_magneto_models/refs/heads/main/{spt}profiles/{line}/{fname}"
+    return url
 
-    return local_path
 
+# # Function to download file from dropbox and save to local path
+# def download_from_dropbox(remote_path, local_path):
+#     print(f"Downloading {remote_path} from Dropbox...")
 
-# Function to download file from dropbox and save to local path
-def download_from_dropbox(remote_path, local_path):
-    print(f"Downloading {remote_path} from Dropbox...")
+#     md, res = dbx.files_download(remote_path)
 
-    md, res = dbx.files_download(remote_path)
-
-    with open(local_path, "wb") as f:
-        f.write(res.content)
+#     with open(local_path, "wb") as f:
+#         f.write(res.content)
 
 
 
 
 @st.cache_data
-def load_data(file_name,spectral_type):
+def load_data(file_name,spectral_type,line):
     # data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
-    data = ascii.read(get_model_file(file_name,spectral_type), names=['Velocity','Flux'])
+    print(get_model_file(file_name,spectral_type,line))
+    data = ascii.read(get_model_file(file_name,spectral_type,line), names=['Velocity','Flux'])
 
     return data
 
@@ -263,7 +267,7 @@ def get_flux_data():
         # files_to_plot.append((file_name, spectral_type))
 
         # Load the data
-        profdata = load_data(file_name,spectype)
+        profdata = load_data(file_name,spectype,row.line)
         vel = profdata['Velocity'].data
         fnu = profdata['Flux'].data
         v1,v2 = vel[0], vel[-1]
