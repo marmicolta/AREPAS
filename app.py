@@ -52,7 +52,7 @@ with st.expander("How to use this app"):
     st.markdown("3. Select *one* row in the data table by clicking the checkbox in the first column to visualize the corresponding line profiles. Select *all* rows by clicking the checkbox in the header of the first column. \n")
     st.markdown("4. Use the 'Clear Data' button to reset selections.""")
     st.markdown("The plot has an interactive legend and zooming capabilities. Click on legend entries to toggle visibility of specific models. Click and drag on the plot area to zoom in on regions of interest. Double-click to reset the zoom.")
-
+    st.markdown("To download the raw data for all the models you have selected, click on the graph symbol at the top-right corner of the plot and then click the down arrow in the top-right corner that will let you 'Download as CSV'.")
 @st.cache_data
 def load_ids():
     data = pd.read_csv('magnetomodels-ids.csv')
