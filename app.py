@@ -12,7 +12,10 @@ import dropbox
 import os
 import shutil
 
-
+st.set_page_config(layout="wide",
+    page_title="Magneto Models",
+    page_icon=":sparkles:",
+    initial_sidebar_state="expanded")
 # --------- Dropbox API setup ---------- #
 # .env should be in gitignore but really not gonna make Nuria figure out APIs
 
