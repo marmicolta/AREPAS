@@ -4,7 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from astropy.io import ascii
 import altair as alt
-
+import astropy.units as u
+from astropy.constants import c
 from pathlib import Path
 from dotenv import load_dotenv
 import dropbox
@@ -30,6 +31,73 @@ dbx = dropbox.Dropbox(
     app_key=os.environ["DROPBOX_APP_KEY"],
     app_secret=os.environ["DROPBOX_APP_SECRET"],
 )
+
+def get_flux(flux, vel, line):
+    
+    ve = vel*u.km/u.s
+    freq = 1e9*c/(line_centers[line]*u.m)
+    nu = -1.0 * ve/(c.to('km/s')) * freq + freq
+    fnu = flux*(u.erg/(u.cm*u.cm*u.s*u.Hz))
+                    
+    # approximate the continuum with a linear function
+    nu1, nu2 = nu[0], nu[-1]
+    fnu1, fnu2 = fnu[0], fnu [-1]
+    m = (fnu2 - fnu1) / (nu2 - nu1)
+    fnu_con = m * (nu - nu1) + fnu1
+                    
+    #Flux continuum substracted
+    fluxvsel = (fnu - fnu_con).value
+                        
+    #Flux in emission
+    fluxpos = [0 if b < 0 else b for b in fluxvsel]
+    flux_line = (-1.0 * np.trapezoid(fluxpos, nu))
+                    
+    # #Flux in absorption
+    # fluxneg = [0 if b > 0 else b for b in fluxvsel]
+    # flux_abs = (-1.0 * np.trapz(fluxneg, nu))
+    
+    # return fluxpos, flux_line, flux_abs, fluxneg
+    return flux_line
+
+
+#--------- Get data model from Github---------- #
+# CACHE_DIR = Path.home() / ".cache" / "magnetomodels"
+# CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Function to get model file from dropbox
+def get_model_file(fname,spt,line):
+    
+    # # Check if file exists in cache
+    # local_path = CACHE_DIR / f"{spt}.{fname}"
+    # # If not, download it from dropbox
+    # if not local_path.exists():
+    #     # print(spt)
+    #     print(f"/Profiles/{spt}profiles/{fname}")
+    #     download_from_dropbox(f"/Profiles/{spt}profiles/{fname}", local_path)
+    url = f"https://raw.githubusercontent.com/marmicolta/data_magneto_models/refs/heads/main/{spt}profiles/{line}/{fname}"
+    return url
+
+
+# # Function to download file from dropbox and save to local path
+# def download_from_dropbox(remote_path, local_path):
+#     print(f"Downloading {remote_path} from Dropbox...")
+
+#     md, res = dbx.files_download(remote_path)
+
+#     with open(local_path, "wb") as f:
+#         f.write(res.content)
+
+
+
+
+@st.cache_data
+def load_data(file_name,spectral_type,line):
+    # data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
+    print(get_model_file(file_name,spectral_type,line))
+    data = ascii.read(get_model_file(file_name,spectral_type,line), names=['Velocity','Flux'])
+
+    return data
+
 
 # --------- Page Title ---------- #
 st.set_page_config(layout="wide")
@@ -99,16 +167,29 @@ abundances = {'.Ca':r"Solar",
             '.Ca_0p01':r"1% Solar",
             }
 
+line_centers = {'h23':656.279, \
+         'h24':486.135, \
+         'h25':434.0472,\
+         'h35':1281.8072, \
+         'h36':1093.8086, \
+         'h37':1004.9369, \
+         'h47':2166.121,\
+         'ca15':393.4, \
+         'ca25':849.802, \
+         'ca35':854.209,
+         'mg12':280.367
+        }     
+
 # temps_ = temps[mdots[md]['tmin']:mdots[md]['tmax']]
 
 # Create an empty dataframe on first page load, will skip on page reloads
 if 'data' not in st.session_state:
-    data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
+    data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.data = data
 
 # --- button to clear the dataframe ---
 def clear_data():
-    st.session_state.data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "Spectral Type":[]})
+    st.session_state.data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
 st.button('Clear Data', on_click=clear_data, help='Clears all selected model parameters and plotted data.')
 
@@ -126,7 +207,13 @@ def add_df():
             'Width':[st.session_state.Width],
             'Inclination':[st.session_state.Inclination],
             'Abundance':[st.session_state.abund],
-            "Spectral Type":[st.session_state.spectral_type]})
+            "SpectralType":[st.session_state.spectral_type],
+            "Int_Flux":[st.session_state.Int_Flux],
+            "Velocity":[st.session_state.vel],
+            "Flux":[st.session_state.fnu],
+            "Nflux":[st.session_state.Nflux],
+            "Label":[st.session_state.label],
+            "Filename":[st.session_state.filename]})
     # Check if the row already exists in the dataframe
     exists = ((st.session_state.data['line'] == st.session_state.line) &
               (st.session_state.data['Mdot'] == st.session_state.Mdot) &
@@ -135,7 +222,7 @@ def add_df():
               (st.session_state.data['Width'] == st.session_state.Width) &
               (st.session_state.data['Inclination'] == st.session_state.Inclination) &
               (st.session_state.data['Abundance'] == st.session_state.abund) &
-              (st.session_state.data['Spectral Type'] == st.session_state.spectral_type)).any()
+              (st.session_state.data['SpectralType'] == st.session_state.spectral_type)).any()
     if not exists:
         st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
@@ -178,49 +265,45 @@ with st.sidebar:
 
     spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type', help='The spectral type of the star.')
     #                     disabled=True)
+
+    abundance = abund
+    if abundance==None:
+        abundance = ""
+    mdot_idx = np.where(mdot_list  == Mdot)
+    tmax_idx = np.where(temps_list == Tmax)[0][0]+1
+    geo_idx = mag_ids[ (mag_ids['Rin'] == Rin) & (mag_ids['Width'] == width)]['ID'].values[0]
+    file_name = f'prof.{line}{abundance}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(inc)}.0'
+
+    st.session_state.filename = file_name
+    # Load the data
+    profdata = load_data(file_name,spectral_type,line)
+    vel = profdata['Velocity'].data
+    fnu = profdata['Flux'].data
+    st.session_state.vel = vel
+    st.session_state.fnu = fnu
+    v1,v2 = vel[0], vel[-1]
+    f1,f2 = fnu[0],fnu[-1]
+
+    m = (f2-f1)/(v2-v1)
+    f_cont = m * (vel-v1) + f1
+
+    st.session_state.Nflux = fnu/f_cont
+
+
+    Int_Flux = get_flux(fnu, vel, line)
+    st.session_state.Int_Flux = Int_Flux.value
+
+    label = f"{lines[line]}|{Mdot:.2f}|{Tmax:.0f}|{Rin}|{width}|{inc:.0f}|{spectral_type}|{abundance}|{Int_Flux:.2e}"
+
+    label = label.replace('.Ca',' Ca Solar').replace('_0p5',' 50% Solar').replace('_0p1',' 10% Solar').replace('_0p01',' 1% Solar')
+    st.session_state.label = label
+    # print(st.session_state.Int_Flux)
     st.button('Submit', on_click=add_df)
 
 # Show current data
 # df = st.dataframe(st.session_state.data, width='content', on_select='rerun', selection_mode='multi-row')
-event = st.dataframe(st.session_state.data, width='stretch', on_select='rerun', selection_mode='multi-row')
+event = st.dataframe(st.session_state.data, width='stretch', on_select='rerun', selection_mode='multi-row', column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None})
 
-#--------- Get data model from dropbox ---------- #
-CACHE_DIR = Path.home() / ".cache" / "magnetomodels"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-# Function to get model file from dropbox
-def get_model_file(fname,spt,line):
-    
-    # # Check if file exists in cache
-    # local_path = CACHE_DIR / f"{spt}.{fname}"
-    # # If not, download it from dropbox
-    # if not local_path.exists():
-    #     # print(spt)
-    #     print(f"/Profiles/{spt}profiles/{fname}")
-    #     download_from_dropbox(f"/Profiles/{spt}profiles/{fname}", local_path)
-    url = f"https://raw.githubusercontent.com/marmicolta/data_magneto_models/refs/heads/main/{spt}profiles/{line}/{fname}"
-    return url
-
-
-# # Function to download file from dropbox and save to local path
-# def download_from_dropbox(remote_path, local_path):
-#     print(f"Downloading {remote_path} from Dropbox...")
-
-#     md, res = dbx.files_download(remote_path)
-
-#     with open(local_path, "wb") as f:
-#         f.write(res.content)
-
-
-
-
-@st.cache_data
-def load_data(file_name,spectral_type,line):
-    # data = ascii.read('models/K7/'+file_name, names=['Velocity','Flux'])
-    print(get_model_file(file_name,spectral_type,line))
-    data = ascii.read(get_model_file(file_name,spectral_type,line), names=['Velocity','Flux'])
-
-    return data
 
 # --------- find the indices for file naming ---------- #
 # Store each profile's data in a list for overplotting
@@ -234,11 +317,15 @@ def load_data(file_name,spectral_type,line):
 # st.dataframe(st.session_state.all_data)
 normalize_flux = st.checkbox('Normalize Flux', value=False, help='If checked, the flux will be normalized so the continuum level has a value of 1.')
 hide_legend = st.checkbox('Hide Legend', value=False, help='If checked, the legend will be hidden from the plot.')
+
+
+
 def get_flux_data():
     rows = event.selection.rows
     filtered_df = st.session_state.data.iloc[rows]
     # st.dataframe(filtered_df)
     st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+
     # for row in st.session_state.data.itertuples():
     for row in filtered_df.itertuples():
         # print(row)
@@ -248,39 +335,48 @@ def get_flux_data():
         # Rin = row.Rin
         # width = row.Width
         # inc = row.Inclination
-        abundance = row.Abundance
-        if abundance==None:
-            abundance = ""
-        spectype = row._8
-        mdot_idx = np.where(mdot_list  == row.Mdot)
-        tmax_idx = np.where(temps_list == row.Tmax)[0][0]+1
+        # print(row)
+        # abundance = row.Abundance
+        # if abundance==None:
+        #     abundance = ""
+        # spectype = row._8
+        # mdot_idx = np.where(mdot_list  == row.Mdot)
+        # tmax_idx = np.where(temps_list == row.Tmax)[0][0]+1
 
-        # print(Rin)
-        # print(width)
-        #We wanr the index where the mags_id row has the combination of Ri and width
-        geo_idx = mag_ids[ (mag_ids['Rin'] == row.Rin) & (mag_ids['Width'] == row.Width)]['ID'].values[0]
-        # print(geo_idx)
+        # # print(Rin)
+        # # print(width)
+        # #We wanr the index where the mags_id row has the combination of Ri and width
+        # geo_idx = mag_ids[ (mag_ids['Rin'] == row.Rin) & (mag_ids['Width'] == row.Width)]['ID'].values[0]
+        # # print(geo_idx)
 
 
-        file_name = f'prof.{row.line}{abundance}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(row.Inclination)}.0'
-        # print(file_name)
-        # files_to_plot.append((file_name, spectral_type))
+        # file_name = f'prof.{row.line}{abundance}.G{geo_idx:02d}.M{mdot_idx[0][0]+1:02d}.T{tmax_idx:02d}.I{int(row.Inclination)}.0'
+        # # print(file_name)
+        # # files_to_plot.append((file_name, spectral_type))
 
-        # Load the data
-        profdata = load_data(file_name,spectype,row.line)
-        vel = profdata['Velocity'].data
-        fnu = profdata['Flux'].data
-        v1,v2 = vel[0], vel[-1]
-        f1,f2 = fnu[0],fnu[-1]
+        # # Load the data
+        # profdata = load_data(file_name,spectype,row.line)
+        # vel = profdata['Velocity'].data
+        # fnu = profdata['Flux'].data
+        # v1,v2 = vel[0], vel[-1]
+        # f1,f2 = fnu[0],fnu[-1]
 
-        m = (f2-f1)/(v2-v1)
-        f_cont = m * (vel-v1) + f1
+        # m = (f2-f1)/(v2-v1)
+        # f_cont = m * (vel-v1) + f1
 
-        Nflux = fnu/f_cont
+        # Nflux = fnu/f_cont
 
-        pandas_data = profdata.to_pandas()
-        pandas_data['Nflux'] = Nflux
-
+        # Int_Flux = get_flux(fnu, vel, row.line)
+        # print(row)
+        # profdata = load_data(row.Filename,row.SpectralType,row.line)
+        vel = row.Velocity
+        fnu = row.Flux
+        pandas_data = pd.DataFrame({'Velocity':vel, 'Flux':fnu})
+        # print(profdata)
+        # pandas_data = profdata.to_pandas()
+        pandas_data['Nflux'] = row.Nflux
+        pandas_data['Int_Flux'] = row.Int_Flux
+        pandas_data['Label'] = row.Label
         # print(normalize_flux)
         # if normalize_flux:
             # data['Flux'] = data['Flux']/np.max(data['Flux'])
@@ -293,9 +389,9 @@ def get_flux_data():
 
         # profile_df = pandas_data[['Velocity', 'Flux']].copy()
         # pandas_data['Label'] = f"{lines[row.line]}, Mdot={row.Mdot:.2e}, Tmax={row.Tmax}, Rin={row.Rin}, Width={row.Width}, Inc={row.Inclination}, Spt={spectype}, Abund={abundance}"
-        pandas_data['Label'] = f"{lines[row.line]}|{row.Mdot:.2f}|{row.Tmax:.0f}|{row.Rin}|{row.Width}|{row.Inclination:.0f}|{spectype}|{abundance}"
+        # pandas_data['Label'] = f"{lines[row.line]}|{row.Mdot:.2f}|{row.Tmax:.0f}|{row.Rin}|{row.Width}|{row.Inclination:.0f}|{row.SpectralType}|{row.Abundance}|{row.Int_Flux:.2e}"
 
-        pandas_data['Label'] = pandas_data['Label'].str.replace('.Ca',' Ca Solar').str.replace('_0p5',' 50% Solar').str.replace('_0p1',' 10% Solar').str.replace('_0p01',' 1% Solar')
+        # pandas_data['Label'] = pandas_data['Label'].str.replace('.Ca',' Ca Solar').str.replace('_0p5',' 50% Solar').str.replace('_0p1',' 10% Solar').str.replace('_0p01',' 1% Solar')
         # st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
         st.session_state.all_data = pd.concat([st.session_state.all_data, pandas_data], ignore_index=True)
@@ -304,6 +400,7 @@ def get_flux_data():
 
 # st.dataframe(st.session_state.all_data)
 get_flux_data()
+# st.session_state.data.int_flux = int_fluxes
 
 if normalize_flux:
     flux_label = 'Normalized Fν'
@@ -318,6 +415,7 @@ else:
 # --------- plotting the models ---------- #
 
 if not st.session_state.all_data.empty:
+    # st.dataframe(st.session_state.all_data, width='stretch')
 
     selection = alt.selection_point(fields=['Label'], bind='legend')
     selection_zoom = alt.selection_interval(bind='scales', empty='all')
