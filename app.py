@@ -184,12 +184,12 @@ line_centers = {'h23':656.279, \
 
 # Create an empty dataframe on first page load, will skip on page reloads
 if 'data' not in st.session_state:
-    data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
+    data = pd.DataFrame({'line':[], 'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.data = data
 
 # --- button to clear the dataframe ---
 def clear_data():
-    st.session_state.data = pd.DataFrame({'line':[],'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
+    st.session_state.data = pd.DataFrame({'line':[],'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
 st.button('Clear Data', on_click=clear_data, help='Clears all selected model parameters and plotted data.')
 
@@ -201,6 +201,7 @@ st.button('Clear Data', on_click=clear_data, help='Clears all selected model par
 # Function to append non-form inputs into dataframe
 def add_df():
     row = pd.DataFrame({'line':[st.session_state.line],
+            'Line':[lines[st.session_state.line]],
             'Mdot':[st.session_state.Mdot],
             'Tmax':[st.session_state.Tmax],
             'Rin':[st.session_state.Rin],
@@ -293,7 +294,7 @@ with st.sidebar:
     Int_Flux = get_flux(fnu, vel, line)
     st.session_state.Int_Flux = Int_Flux.value
 
-    label = f"{lines[line]}|{Mdot:.2f}|{Tmax:.0f}|{Rin}|{width}|{inc:.0f}|{spectral_type}|{abundance}|{Int_Flux:.2e}"
+    label = f"{lines[line]}|{Mdot:.2f}|{Tmax:.0f}|{Rin}|{width}|{inc:.0f}|{spectral_type}|{abundance}|{Int_Flux.value:.2e}"
 
     label = label.replace('.Ca',' Ca Solar').replace('_0p5',' 50% Solar').replace('_0p1',' 10% Solar').replace('_0p01',' 1% Solar')
     st.session_state.label = label
@@ -302,8 +303,12 @@ with st.sidebar:
 
 # Show current data
 # df = st.dataframe(st.session_state.data, width='content', on_select='rerun', selection_mode='multi-row')
-event = st.dataframe(st.session_state.data, width='stretch', on_select='rerun', selection_mode='multi-row', column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None})
 
+
+event = st.dataframe(st.session_state.data, width='stretch', on_select='rerun', selection_mode='multi-row', 
+                     column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None, 
+                                    "line": None, "Int_Flux": st.column_config.NumberColumn("Integrated Flux (erg/s/cm^2)",format="%.2e"), "SpectralType": st.column_config.TextColumn("Spectral Type") })
+# st.session_state.data.style.format({'Int_Flux': "{:.2E}"})
 
 # --------- find the indices for file naming ---------- #
 # Store each profile's data in a list for overplotting
