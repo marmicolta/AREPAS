@@ -7,8 +7,8 @@ import altair as alt
 import astropy.units as u
 from astropy.constants import c
 from pathlib import Path
-from dotenv import load_dotenv
-import dropbox
+# from dotenv import load_dotenv
+# import dropbox
 import os
 import shutil
 
@@ -19,7 +19,7 @@ st.set_page_config(layout="wide",
 # --------- Dropbox API setup ---------- #
 # .env should be in gitignore but really not gonna make Nuria figure out APIs
 
-load_dotenv()  # reads .env automatically. 
+# load_dotenv()  # reads .env automatically. 
 # DROPBOX_TOKEN = os.getenv("DROPBOX_TOKEN")
 
 # if DROPBOX_TOKEN is None:
@@ -29,11 +29,11 @@ load_dotenv()  # reads .env automatically.
 #     )
 
 # dbx = dropbox.Dropbox(DROPBOX_TOKEN)
-dbx = dropbox.Dropbox(
-    oauth2_refresh_token=os.environ["DROPBOX_REFRESH_TOKEN"],
-    app_key=os.environ["DROPBOX_APP_KEY"],
-    app_secret=os.environ["DROPBOX_APP_SECRET"],
-)
+# dbx = dropbox.Dropbox(
+#     oauth2_refresh_token=os.environ["DROPBOX_REFRESH_TOKEN"],
+#     app_key=os.environ["DROPBOX_APP_KEY"],
+#     app_secret=os.environ["DROPBOX_APP_SECRET"],
+# )
 
 def get_flux(flux, vel, line):
     
