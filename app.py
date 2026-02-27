@@ -1,3 +1,5 @@
+import time
+
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -192,8 +194,10 @@ if 'data' not in st.session_state:
 
 # --- button to clear the dataframe ---
 def clear_data():
+    print(st.session_state.data)
     st.session_state.data = pd.DataFrame({'line':[],'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+    print(st.session_state.data)
 st.button('Clear Data', on_click=clear_data, help='Clears all selected model parameters and plotted data.')
 
 # if 'all_data' not in st.session_state:
@@ -202,9 +206,13 @@ st.button('Clear Data', on_click=clear_data, help='Clears all selected model par
 
 
 # Function to append non-form inputs into dataframe
-def add_df():
+def add_df(user_data=False):
+    if user_data:
+        l = lines[st.session_state.line]
+    else:
+        l = st.session_state.line
     row = pd.DataFrame({'line':[st.session_state.line],
-            'Line':[lines[st.session_state.line]],
+            'Line':[l],
             'Mdot':[st.session_state.Mdot],
             'Tmax':[st.session_state.Tmax],
             'Rin':[st.session_state.Rin],
@@ -303,6 +311,51 @@ with st.sidebar:
     st.session_state.label = label
     # print(st.session_state.Int_Flux)
     st.button('Submit', on_click=add_df)
+
+# -------let user upload their own models ------- #
+uploaded_file = st.sidebar.file_uploader("Upload your own model data (CSV with columns: Velocity, Flux)", accept_multiple_files=False)
+
+def add_user_file():
+    success = st.toast("File uploaded successfully!", duration='short')
+
+    # check if session state doesn't alreayd contain the user model, if not add it to the dataframe
+    if not (st.session_state.data['Filename'] == uploaded_file.name).any():
+
+
+        st.session_state.vel = user_data['Velocity']
+        st.session_state.fnu = user_data['Flux']
+        vel = st.session_state.vel
+        fnu = st.session_state.fnu
+        v1,v2 = vel[0], vel[-1]
+        f1,f2 = fnu[0],fnu[-1]
+
+        m = (f2-f1)/(v2-v1)
+        f_cont = m * (vel-v1) + f1
+
+        st.session_state.Nflux = fnu/f_cont
+
+        # st.session_state.Int_Flux = np.nan
+        # add_df()
+
+        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[np.nan], 'Width':[np.nan], 'Inclination':[np.nan], 'Abundance':[np.nan], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
+
+# check that file has first 2 columns that are numerical
+if uploaded_file is not None:
+    print(uploaded_file.name)
+    try:
+        user_data = ascii.read(uploaded_file, names=['Velocity','Flux'])
+        # print(user_data)
+        if type(user_data['Velocity'].data[0]) not in [np.float64, np.float32, np.int64, np.int32] or type(user_data['Flux'].data[0]) not in [np.float64, np.float32, np.int64, np.int32]:
+            st.error("CSV file must have numerical values in 'Velocity' and 'Flux' columns.")
+        else:
+             st.sidebar.button('Submit', on_click=add_user_file, key='upload_button')
+    except Exception as e:
+        error = st.error(f"Error reading file: {e}")
+
+
+
+
+
 
 # Show current data
 # df = st.dataframe(st.session_state.data, width='content', on_select='rerun', selection_mode='multi-row')
@@ -435,7 +488,7 @@ if not st.session_state.all_data.empty:
     chart1 = alt.Chart(st.session_state.all_data).mark_point().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
         y=alt.Y(flux_param, title=flux_label),
-        color=alt.Color('Label:N', legend=legend),
+        color=alt.Color('Label:N', legend=legend, scale=alt.Scale(scheme='observable10')),
         tooltip=['Velocity', flux_param, 'Label'],
         opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
         ).properties(
@@ -448,7 +501,7 @@ if not st.session_state.all_data.empty:
     chart2 = alt.Chart(st.session_state.all_data).mark_line().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
         y=alt.Y(flux_param, title=flux_label),
-        color='Label:N',
+        color=alt.Color('Label:N', scale=alt.Scale(scheme='observable10')),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
         ).properties(
         # title=f'Line Profile: {lines[line]}, Mdot={Mdot:.2e} Msun/yr, Tmax={Tmax}K, Rin={Rin}R*, Width={width}R*, Inc={inc}°',
