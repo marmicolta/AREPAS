@@ -116,16 +116,20 @@ with st.expander("How to use this app"):
     This app allows users to explore magnetospheric accretion line profile models for different spectral lines, 
              mass accretion rates, maximum temperatures, disk geometries, inclinations, and abundances. 
              Select model parameters from the sidebar to visualize how they affect the line profiles. 
-             Multiple models can be overplotted for comparison. Data files are fetched from Dropbox 
+             Multiple models can be overplotted for comparison. You can also upload your own file with an observed profile to compare to the models.
+            Data files are fetched from Github 
              as needed and cached locally for faster access. 
     ''')
     st.markdown("### Instructions:")
-    st.markdown("1. Use the sidebar to select model parameters")
+    st.markdown("1. Use the sidebar to select model parameters.")
     st.markdown("2. Click 'Submit' to add the selected model to the dataframe. \n")
-    st.markdown("3. Select *one* row in the data table by clicking the checkbox in the first column to visualize the corresponding line profiles. Select *all* rows by clicking the checkbox in the header of the first column. \n")
-    st.markdown("4. Use the 'Clear Data' button to reset selections.""")
+    st.markdown("3. To upload your own data, click 'Browse files' in the sidebar and select a CSV file where the first two columns are velocity (in km/s)  and flux (in erg/s/cm²/Hz). Other columns will be ignored. Then click 'Submit' to add it to the dataframe. \n")
+    st.markdown("""4. Select *one* row in the data table by clicking the checkbox in the first column to visualize the corresponding line profiles. Select *all* rows by clicking the checkbox in the header of the first column. 
+                    \n      * Use the 'Normalize Flux' checkbox to toggle between normalized and absolute flux values. If comparing with observed data, it is recommended to use normalized flux values as the model fluxes are calculated at the surface of the star.\n""")
+    st.markdown("5. Use the 'Clear Data' button to reset selections.""")
     st.markdown("The plot has an interactive legend and zooming capabilities. Click on legend entries to toggle visibility of specific models. Click and drag on the plot area to zoom in on regions of interest. Double-click to reset the zoom.")
     st.markdown("To download the raw data for all the models you have selected, click on the graph symbol at the top-right corner of the plot and then click the down arrow in the top-right corner that will let you 'Download as CSV'.")
+
 @st.cache_data
 def load_ids():
     data = pd.read_csv('magnetomodels-ids.csv')
