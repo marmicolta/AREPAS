@@ -342,7 +342,7 @@ def add_user_file():
         # st.session_state.Int_Flux = np.nan
         # add_df()
 
-        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[np.nan], 'Width':[np.nan], 'Inclination':[np.nan], 'Abundance':[np.nan], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
+        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[None], 'Width':[None], 'Inclination':[np.nan], 'Abundance':[np.nan], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
 
 # check that file has first 2 columns that are numerical
 if uploaded_file is not None:
@@ -366,19 +366,23 @@ if uploaded_file is not None:
 # df = st.dataframe(st.session_state.data, width='content', on_select='rerun', selection_mode='multi-row')
 
 colors= ["#FFFFFFFF","#E3CDED13"]
+
 # 2. Create the colormap object
 # The colors are automatically spaced evenly from 0 to 1
 custom_cmap = mcolors.LinearSegmentedColormap.from_list("my_gradient", colors, N=20)
+custom_cmap_r = mcolors.LinearSegmentedColormap.from_list("my_gradient_r", colors[::-1], N=20)
 
-
-styled_df = st.session_state.data.style.background_gradient(cmap=custom_cmap, axis=0, subset=['Line'], gmap=st.session_state.data['Line'].map(lambda x: hash(x) % 100))#, vmin=mdot_list.min(), vmax= mdot_list.max())
+styled_df = st.session_state.data.style.background_gradient(cmap=custom_cmap_r, axis=0, subset=['Line'], gmap=st.session_state.data['Line'].map(lambda x: hash(x) % 100))#, vmin=mdot_list.min(), vmax= mdot_list.max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Mdot'])#, vmin=mag_ids['Mdot'].min(), vmax=mag_ids['Mdot'].max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Tmax'])#, vmin=temps_list.min(), vmax=temps_list.max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Rin'])#, vmin=mag_ids['Rin'].min(), vmax=mag_ids['Rin'].max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Width'])#, vmin=mag_ids['Width'].min(), vmax=mag_ids['Width'].max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Inclination'])#, vmin=15, vmax=75)
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Abundance'], gmap=st.session_state.data['Abundance'].map(lambda x: hash(x) % 100))
-styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['SpectralType'], gmap=st.session_state.data['SpectralType'].map(lambda x: hash(x) % 100))
+styled_df = styled_df.background_gradient(cmap=custom_cmap_r, axis=0, subset=['SpectralType'], gmap=st.session_state.data['SpectralType'].map(lambda x: hash(x) % 100))
+
+# if user-added file, don't apply gradient to parameter columns
+styled_df = styled_df.apply(lambda x: ['background-color: transparent' if x['line'] not in lines.keys() else '' for i in x], axis=1)
 event = st.dataframe(styled_df, width='stretch', on_select='rerun', selection_mode='multi-row', 
                      column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None, 
                                     "line": None, "Int_Flux": st.column_config.NumberColumn("Integrated Flux (erg/s/cm^2)",format="%.2e"), "SpectralType": st.column_config.TextColumn("Spectral Type") ,
