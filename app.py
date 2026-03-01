@@ -13,6 +13,7 @@ from pathlib import Path
 # import dropbox
 import os
 import shutil
+import matplotlib.colors as mcolors
 
 st.set_page_config(layout="wide",
     page_title="Magneto Models",
@@ -364,10 +365,24 @@ if uploaded_file is not None:
 # Show current data
 # df = st.dataframe(st.session_state.data, width='content', on_select='rerun', selection_mode='multi-row')
 
+colors= ["#FFFFFFFF","#E3CDED13"]
+# 2. Create the colormap object
+# The colors are automatically spaced evenly from 0 to 1
+custom_cmap = mcolors.LinearSegmentedColormap.from_list("my_gradient", colors, N=20)
 
-event = st.dataframe(st.session_state.data, width='stretch', on_select='rerun', selection_mode='multi-row', 
+
+styled_df = st.session_state.data.style.background_gradient(cmap=custom_cmap, axis=0, subset=['Line'], gmap=st.session_state.data['Line'].map(lambda x: hash(x) % 100))#, vmin=mdot_list.min(), vmax= mdot_list.max())
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Mdot'])#, vmin=mag_ids['Mdot'].min(), vmax=mag_ids['Mdot'].max())
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Tmax'])#, vmin=temps_list.min(), vmax=temps_list.max())
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Rin'])#, vmin=mag_ids['Rin'].min(), vmax=mag_ids['Rin'].max())
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Width'])#, vmin=mag_ids['Width'].min(), vmax=mag_ids['Width'].max())
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Inclination'])#, vmin=15, vmax=75)
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Abundance'], gmap=st.session_state.data['Abundance'].map(lambda x: hash(x) % 100))
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['SpectralType'], gmap=st.session_state.data['SpectralType'].map(lambda x: hash(x) % 100))
+event = st.dataframe(styled_df, width='stretch', on_select='rerun', selection_mode='multi-row', 
                      column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None, 
-                                    "line": None, "Int_Flux": st.column_config.NumberColumn("Integrated Flux (erg/s/cm^2)",format="%.2e"), "SpectralType": st.column_config.TextColumn("Spectral Type") })
+                                    "line": None, "Int_Flux": st.column_config.NumberColumn("Integrated Flux (erg/s/cm^2)",format="%.2e"), "SpectralType": st.column_config.TextColumn("Spectral Type") ,
+                                    "Mdot": st.column_config.NumberColumn("Mdot (Msun/yr)", format="%.2f"), "Tmax": st.column_config.NumberColumn("Tmax (K)", format="%.0f"), "Rin": st.column_config.NumberColumn("Rin (R*)", format="%.1f"), "Width": st.column_config.NumberColumn("Width (R*)", format="%.1f"), "Inclination": st.column_config.NumberColumn("Inclination (deg)", format="%.0f"), "Abundance": st.column_config.TextColumn("Abundance")})
 # st.session_state.data.style.format({'Int_Flux': "{:.2E}"})
 
 # --------- find the indices for file naming ---------- #
