@@ -240,6 +240,7 @@ def add_df(user_data=False):
               (st.session_state.data['Inclination'] == st.session_state.Inclination) &
               (st.session_state.data['Abundance'] == st.session_state.abund) &
               (st.session_state.data['SpectralType'] == st.session_state.spectral_type)).any()
+    print("@*#&*@#&@&*@&#(@&#*(@", row)
     if not exists:
         st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
@@ -267,7 +268,7 @@ with st.sidebar:
     width = st.selectbox('Select width', np.sort(mag_ids['Width'][~np.isnan(mag_ids['Width'])].unique()), key='Width', help='The width of the disk in stellar radii.')
 
     inc= st.selectbox('Select inclination', [15,30,45,60,75], key='Inclination', help='The inclination angle of the disk in degrees.')
-    if line == 'ca15':
+    if line[0:2] == 'ca':
 
         # print(abundances.keys())
         if st.session_state.get('abund') is None:
