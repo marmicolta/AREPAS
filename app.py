@@ -383,7 +383,7 @@ styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Rin
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Width'])#, vmin=mag_ids['Width'].min(), vmax=mag_ids['Width'].max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Inclination'])#, vmin=15, vmax=75)
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Abundance'], gmap=st.session_state.data['Abundance'].map(abundance_map))
-styled_df = styled_df.background_gradient(cmap=custom_cmap_r, axis=0, subset=['SpectralType'], gmap=st.session_state.data['SpectralType'].map(spectraltype_map))
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['SpectralType'], gmap=st.session_state.data['SpectralType'].map(spectraltype_map))
 
 # if user-added file, don't apply gradient to parameter columns
 styled_df = styled_df.apply(lambda x: ['background-color: transparent' if x['line'] not in lines.keys() else '' for i in x], axis=1)
