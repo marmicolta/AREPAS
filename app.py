@@ -240,7 +240,6 @@ def add_df(user_data=False):
               (st.session_state.data['Inclination'] == st.session_state.Inclination) &
               (st.session_state.data['Abundance'] == st.session_state.abund) &
               (st.session_state.data['SpectralType'] == st.session_state.spectral_type)).any()
-    print("@*#&*@#&@&*@&#(@&#*(@", row)
     if not exists:
         st.session_state.data = pd.concat([st.session_state.data, row], ignore_index=True)
 
@@ -350,8 +349,8 @@ if uploaded_file is not None:
     print(uploaded_file.name)
     try:
         user_data = ascii.read(uploaded_file, names=['Velocity','Flux'])
-        # print(user_data)
-        if type(user_data['Velocity'].data[0]) not in [np.float64, np.float32, np.int64, np.int32] or type(user_data['Flux'].data[0]) not in [np.float64, np.float32, np.int64, np.int32]:
+        # find if all values in the first two columns are numerical, then add the file to the dataframe, otherwise show an error message
+        if type(user_data['Velocity'].data.dtype) not in [np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType, np.dtypes.Int32DType] or type(user_data['Flux'].data.dtype) not in [np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType, np.dtypes.Int32DType]:
             st.error("CSV file must have numerical values in 'Velocity' and 'Flux' columns.")
         else:
              st.sidebar.button('Submit', on_click=add_user_file, key='upload_button')
