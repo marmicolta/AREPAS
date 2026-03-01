@@ -372,14 +372,18 @@ colors= ["#FFFFFFFF","#E3CDED13"]
 custom_cmap = mcolors.LinearSegmentedColormap.from_list("my_gradient", colors, N=20)
 custom_cmap_r = mcolors.LinearSegmentedColormap.from_list("my_gradient_r", colors[::-1], N=20)
 
-styled_df = st.session_state.data.style.background_gradient(cmap=custom_cmap_r, axis=0, subset=['Line'], gmap=st.session_state.data['Line'].map(lambda x: hash(x) % 100))#, vmin=mdot_list.min(), vmax= mdot_list.max())
+# make gmap an integer mapping of the line names from 0-10
+line_map = {line: i for i, line in enumerate(st.session_state.data['Line'].unique())}
+abundance_map = {abundance: i for i, abundance in enumerate(st.session_state.data['Abundance'].unique())}
+spectraltype_map = {spt: i for i, spt in enumerate(st.session_state.data['SpectralType'].unique())}
+styled_df = st.session_state.data.style.background_gradient(cmap=custom_cmap_r, axis=0, subset=['Line'], gmap=st.session_state.data['Line'].map(line_map))#, vmin=mdot_list.min(), vmax= mdot_list.max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Mdot'])#, vmin=mag_ids['Mdot'].min(), vmax=mag_ids['Mdot'].max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Tmax'])#, vmin=temps_list.min(), vmax=temps_list.max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Rin'])#, vmin=mag_ids['Rin'].min(), vmax=mag_ids['Rin'].max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Width'])#, vmin=mag_ids['Width'].min(), vmax=mag_ids['Width'].max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Inclination'])#, vmin=15, vmax=75)
-styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Abundance'], gmap=st.session_state.data['Abundance'].map(lambda x: hash(x) % 100))
-styled_df = styled_df.background_gradient(cmap=custom_cmap_r, axis=0, subset=['SpectralType'], gmap=st.session_state.data['SpectralType'].map(lambda x: hash(x) % 100))
+styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Abundance'], gmap=st.session_state.data['Abundance'].map(abundance_map))
+styled_df = styled_df.background_gradient(cmap=custom_cmap_r, axis=0, subset=['SpectralType'], gmap=st.session_state.data['SpectralType'].map(spectraltype_map))
 
 # if user-added file, don't apply gradient to parameter columns
 styled_df = styled_df.apply(lambda x: ['background-color: transparent' if x['line'] not in lines.keys() else '' for i in x], axis=1)
