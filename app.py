@@ -9,6 +9,7 @@ import altair as alt
 import astropy.units as u
 from astropy.constants import c
 from pathlib import Path
+from astropy.constants import L_sun
 # from dotenv import load_dotenv
 # import dropbox
 import os
@@ -104,12 +105,6 @@ def load_data(file_name,spectral_type,line):
     print(get_model_file(file_name,spectral_type,line))
     data = ascii.read(get_model_file(file_name,spectral_type,line), names=['Velocity','Flux'])
 
-    # get radius of star based on spectral type from file
-    stellar_params = pd.read_csv('https://raw.githubusercontent.com/marmicolta/database_magneto_models/refs/heads/main/model_stellar_parameters.csv')
-    radius = float(stellar_params.loc[stellar_params['SpT'] == spectral_type]['R'])
-    luminosity = 4*np.pi*radius**2*data['Flux']
-    data['Luminosity'] = luminosity
-    print(data)
     return data
 
 
@@ -290,7 +285,7 @@ with st.sidebar:
 
         # abund = st.selectbox('Select Ca abundance',options=['h'], key='abund', disabled=True, placeholder='')
         abund= ""
-        st.session_state.abund = None
+        st.session_state.abund = ""
         # st.form_submit_button('Submit my picks')
 
     spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type', help='The spectral type of the star.')
@@ -309,16 +304,25 @@ with st.sidebar:
     profdata = load_data(file_name,spectral_type,line)
     vel = profdata['Velocity'].data
     fnu = profdata['Flux'].data
-    luminosity = profdata['Luminosity'].data
+    # luminosity = profdata['Luminosity'].data
     st.session_state.vel = vel
     st.session_state.fnu = fnu
-    st.session_state.Luminosity = luminosity
+    # st.session_state.Luminosity = luminosity
     v1,v2 = vel[0], vel[-1]
     f1,f2 = fnu[0],fnu[-1]
 
     m = (f2-f1)/(v2-v1)
     f_cont = m * (vel-v1) + f1
 
+
+    # get radius of star based on spectral type from file
+    stellar_params = pd.read_csv('https://raw.githubusercontent.com/marmicolta/database_magneto_models/refs/heads/main/model_stellar_parameters.csv')
+    # radius = float(stellar_params.loc[stellar_params['SpT'] == spectral_type]['R'])
+    radius = float(stellar_params.iloc[np.where(stellar_params['SpT'] == spectral_type)[0][0]]['R'])*u.Rsun
+    radius = radius.to(u.cm)
+    luminosity = 4*np.pi*radius**2*(fnu-f_cont) # should be flux above the continuum!
+    # print("MODEL", luminosity, L_sun.cgs, luminosity/L_sun.cgs)
+    st.session_state.Luminosity = luminosity/L_sun.cgs # convert to Lsun
     st.session_state.Nflux = fnu/f_cont
 
 
@@ -343,11 +347,10 @@ def add_user_file():
 
 
         st.session_state.vel = user_data['Velocity']
-        st.session_state.fnu = user_data['Flux']
-        print("@&#&@&@&#@", user_data['Distance'])
+        st.session_state.fnu = user_data['Flux']/10
         dist = user_data['Distance'][0]*u.pc
         dist = dist.to(u.cm)    
-        st.session_state.Luminosity = dist**2 * 4 * np.pi * user_data['Flux']
+
         vel = st.session_state.vel
         fnu = st.session_state.fnu
         v1,v2 = vel[0], vel[-1]
@@ -355,13 +358,20 @@ def add_user_file():
 
         m = (f2-f1)/(v2-v1)
         f_cont = m * (vel-v1) + f1
-
+        print(dist**2 * 4 * np.pi * (user_data['Flux']-f_cont))
+        print(L_sun.cgs)
+        st.session_state.Luminosity = (dist**2 * 4 * np.pi * (user_data['Flux']-f_cont))/L_sun.cgs #should be flux above the continuum!
         st.session_state.Nflux = fnu/f_cont
+
+        # fig = plt.figure()
+        # plt.plot(vel, fnu)
+        # plt.plot(vel, f_cont)
+        # plt.savefig("/Users/kgozman/Downloads/test.png")
 
         # st.session_state.Int_Flux = np.nan
         # add_df()
 
-        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[None], 'Width':[None], 'Inclination':[np.nan], 'Abundance':[np.nan], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Luminosity':[st.session_state.Luminosity], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
+        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[None], 'Width':[None], 'Inclination':[np.nan], 'Abundance':[""], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Luminosity':[st.session_state.Luminosity], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
 
 # check that file has first 2 columns that are numerical
 if uploaded_file is not None:
@@ -392,7 +402,10 @@ custom_cmap_r = mcolors.LinearSegmentedColormap.from_list("my_gradient_r", color
 
 # make gmap an integer mapping of the line names from 0-10
 line_map = {line: i for i, line in enumerate(st.session_state.data['Line'].unique())}
-abundance_map = {abundance: i for i, abundance in enumerate(st.session_state.data['Abundance'].unique())}
+abundance_map = {abundance: i for i, abundance in enumerate(st.session_state.data['Abundance'].unique()) if pd.notna(abundance)}
+# print('abund', st.session_state.data['Abundance'].unique())
+# abundance_map[np.nan] = 0  # Map NaN values to 0
+# print(abundance_map)
 spectraltype_map = {spt: i for i, spt in enumerate(st.session_state.data['SpectralType'].unique())}
 styled_df = st.session_state.data.style.background_gradient(cmap=custom_cmap_r, axis=0, subset=['Line'], gmap=st.session_state.data['Line'].map(line_map))#, vmin=mdot_list.min(), vmax= mdot_list.max())
 styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Mdot'])#, vmin=mag_ids['Mdot'].min(), vmax=mag_ids['Mdot'].max())
@@ -537,7 +550,7 @@ if not st.session_state.all_data.empty:
         legend=alt.Legend(title="Models", labelLimit=400, direction="vertical", orient="right", columns=1)
     chart1 = alt.Chart(st.session_state.all_data).mark_point().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
-        y=alt.Y(flux_param, title=flux_label),
+        y=alt.Y(flux_param, axis=alt.Axis(format=".1e"), title=flux_label),
         color=alt.Color('Label:N', legend=legend, scale=alt.Scale(scheme='observable10')),
         tooltip=['Velocity', flux_param, 'Label'],
         opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
@@ -550,7 +563,7 @@ if not st.session_state.all_data.empty:
 
     chart2 = alt.Chart(st.session_state.all_data).mark_line().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
-        y=alt.Y(flux_param, title=flux_label),
+        y=alt.Y(flux_param, axis=alt.Axis(format=".1e"), title=flux_label),
         color=alt.Color('Label:N', scale=alt.Scale(scheme='observable10')),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
         ).properties(
