@@ -16,9 +16,11 @@ import shutil
 import matplotlib.colors as mcolors
 
 st.set_page_config(layout="wide",
-    page_title="Magneto Models",
-    page_icon=":sparkles:",
+    page_title="AREPAS",
+    page_icon="🫓",
     initial_sidebar_state="expanded")
+
+
 # --------- Dropbox API setup ---------- #
 # .env should be in gitignore but really not gonna make Nuria figure out APIs
 
@@ -102,15 +104,21 @@ def load_data(file_name,spectral_type,line):
     print(get_model_file(file_name,spectral_type,line))
     data = ascii.read(get_model_file(file_name,spectral_type,line), names=['Velocity','Flux'])
 
+    # get radius of star based on spectral type from file
+    stellar_params = pd.read_csv('https://raw.githubusercontent.com/marmicolta/database_magneto_models/refs/heads/main/model_stellar_parameters.csv')
+    radius = float(stellar_params.loc[stellar_params['SpT'] == spectral_type]['R'])
+    luminosity = 4*np.pi*radius**2*data['Flux']
+    data['Luminosity'] = luminosity
+    print(data)
     return data
 
 
 # --------- Page Title ---------- #
 st.set_page_config(layout="wide")
 
-st.title("AREPAS: A Resource for Exploring Protostellar Accretion Systems")
+st.title("AREPAS🫓: A Resource for Exploring Protostellar Accretion Systems")
 
-st.write("Welcome to AREPAS. This is a visualization tool for the [Open Library of Magnetospheric Accretion Models for T Tauri stars](https://github.com/marmicolta/database_magneto_models)")
+st.write("Welcome to AREPAS🫓. This is a visualization tool for the [Open Library of Magnetospheric Accretion Models for T Tauri stars](https://github.com/marmicolta/database_magneto_models)")
 
 with st.expander("How to use this app"):
     st.write('''
@@ -124,11 +132,15 @@ with st.expander("How to use this app"):
     st.markdown("### Instructions:")
     st.markdown("1. Use the sidebar to select model parameters.")
     st.markdown("2. Click 'Submit' to add the selected model to the dataframe. \n")
-    st.markdown("3. To upload your own data, click 'Browse files' in the sidebar and select a CSV file where the first two columns are velocity (in km/s)  and flux (in erg/s/cm²/Hz). Other columns will be ignored. Then click 'Submit' to add it to the dataframe. \n")
+    st.markdown("""3. To upload your own data, click 'Browse files' in the sidebar and select a CSV file where the first three columns are velocity (in km/s), flux (in erg/s/cm²/Hz), and distance (in pc). Other columns will be ignored.
+                The distance column needs to just have the first cell with the distance, all other cells may be left blank (they will be ignored). Then click 'Submit' to add it to the dataframe. \n""")
     st.markdown("""4. Select *one* row in the data table by clicking the checkbox in the first column to visualize the corresponding line profiles. Select *all* rows by clicking the checkbox in the header of the first column. 
-                    \n      * Use the 'Normalize Flux' checkbox to toggle between normalized and absolute flux values. If comparing with observed data, it is recommended to use normalized flux values as the model fluxes are calculated at the surface of the star.\n""")
+                    \n      * Use the buttons to choose what to plot on the y-axis. 'Flux' will be the flux in erg/s/cm²/Hz. 'Normalized Flux' will be flux normalized to the continuum.
+                 "Luminosity" will be the luminosity in erg/s, as calculated by L=4πR²F, where F is the flux at the surface of the star and R is the radius of a star of the specified spectral type. 
+                If comparing with observed data, it is recommended to use normalized flux or luminosity values as the model fluxes are calculated at the surface of the star.\n""")
     st.markdown("5. Use the 'Clear Data' button to reset selections.""")
     st.markdown("The plot has an interactive legend and zooming capabilities. Click on legend entries to toggle visibility of specific models. Click and drag on the plot area to zoom in on regions of interest. Double-click to reset the zoom.")
+    st.markdown('You can change the color scheme of the app by toggling between light and dark mode in the settings (top-right corner hamburger menu -> Settings). The color gradients in the dataframe will adjust accordingly to help differentiate between parameter values.')
     st.markdown("To download the raw data for all the models you have selected, click on the graph symbol at the top-right corner of the plot and then click the down arrow in the top-right corner that will let you 'Download as CSV'.")
 
 @st.cache_data
@@ -194,13 +206,13 @@ line_centers = {'h23':656.279, \
 
 # Create an empty dataframe on first page load, will skip on page reloads
 if 'data' not in st.session_state:
-    data = pd.DataFrame({'line':[], 'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
+    data = pd.DataFrame({'line':[], 'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Luminosity':[],'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.data = data
 
 # --- button to clear the dataframe ---
 def clear_data():
     print(st.session_state.data)
-    st.session_state.data = pd.DataFrame({'line':[],'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Nflux':[], 'Label':[], 'Filename':[]})
+    st.session_state.data = pd.DataFrame({'line':[],'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Luminosity':[],'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
     print(st.session_state.data)
 st.button('Clear Data', on_click=clear_data, help='Clears all selected model parameters and plotted data.')
@@ -228,6 +240,7 @@ def add_df(user_data=False):
             "Int_Flux":[st.session_state.Int_Flux],
             "Velocity":[st.session_state.vel],
             "Flux":[st.session_state.fnu],
+            "Luminosity":[st.session_state.Luminosity],
             "Nflux":[st.session_state.Nflux],
             "Label":[st.session_state.label],
             "Filename":[st.session_state.filename]})
@@ -277,7 +290,7 @@ with st.sidebar:
 
         # abund = st.selectbox('Select Ca abundance',options=['h'], key='abund', disabled=True, placeholder='')
         abund= ""
-        st.session_state.abund = ""
+        st.session_state.abund = None
         # st.form_submit_button('Submit my picks')
 
     spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type', help='The spectral type of the star.')
@@ -296,8 +309,10 @@ with st.sidebar:
     profdata = load_data(file_name,spectral_type,line)
     vel = profdata['Velocity'].data
     fnu = profdata['Flux'].data
+    luminosity = profdata['Luminosity'].data
     st.session_state.vel = vel
     st.session_state.fnu = fnu
+    st.session_state.Luminosity = luminosity
     v1,v2 = vel[0], vel[-1]
     f1,f2 = fnu[0],fnu[-1]
 
@@ -318,7 +333,7 @@ with st.sidebar:
     st.button('Submit', on_click=add_df)
 
 # -------let user upload their own models ------- #
-uploaded_file = st.sidebar.file_uploader("Upload your own model data (CSV with columns: Velocity, Flux)", accept_multiple_files=False)
+uploaded_file = st.sidebar.file_uploader("Upload your own model data (CSV with columns: Velocity, Flux, Distance)", accept_multiple_files=False)
 
 def add_user_file():
     success = st.toast("File uploaded successfully!", duration='short')
@@ -329,6 +344,10 @@ def add_user_file():
 
         st.session_state.vel = user_data['Velocity']
         st.session_state.fnu = user_data['Flux']
+        print("@&#&@&@&#@", user_data['Distance'])
+        dist = user_data['Distance'][0]*u.pc
+        dist = dist.to(u.cm)    
+        st.session_state.Luminosity = dist**2 * 4 * np.pi * user_data['Flux']
         vel = st.session_state.vel
         fnu = st.session_state.fnu
         v1,v2 = vel[0], vel[-1]
@@ -342,16 +361,16 @@ def add_user_file():
         # st.session_state.Int_Flux = np.nan
         # add_df()
 
-        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[None], 'Width':[None], 'Inclination':[np.nan], 'Abundance':[np.nan], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
+        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[None], 'Width':[None], 'Inclination':[np.nan], 'Abundance':[np.nan], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Luminosity':[st.session_state.Luminosity], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
 
 # check that file has first 2 columns that are numerical
 if uploaded_file is not None:
     print(uploaded_file.name)
     try:
-        user_data = ascii.read(uploaded_file, names=['Velocity','Flux'])
+        user_data = ascii.read(uploaded_file, names=['Velocity','Flux', 'Distance'])
         # find if all values in the first two columns are numerical, then add the file to the dataframe, otherwise show an error message
-        if type(user_data['Velocity'].data.dtype) not in [np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType, np.dtypes.Int32DType] or type(user_data['Flux'].data.dtype) not in [np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType, np.dtypes.Int32DType]:
-            st.error("CSV file must have numerical values in 'Velocity' and 'Flux' columns.")
+        if type(user_data['Velocity'].data.dtype) not in [np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType, np.dtypes.Int32DType] or type(user_data['Flux'].data.dtype) not in [np.dtypes.Float64DType, np.dtypes.Float32DType, np.dtypes.Int64DType, np.dtypes.Int32DType] or type(user_data['Distance'].data[0]) not in [np.float64, np.float32, np.int64, np.int32]:
+            st.error("CSV file must have numerical values in 'Velocity', 'Flux', and 'Distance' columns.")
         else:
              st.sidebar.button('Submit', on_click=add_user_file, key='upload_button')
     except Exception as e:
@@ -359,13 +378,12 @@ if uploaded_file is not None:
 
 
 
-
-
-
 # Show current data
 # df = st.dataframe(st.session_state.data, width='content', on_select='rerun', selection_mode='multi-row')
-
-colors= ["#FFFFFFFF","#E3CDED13"]
+if (st.context.theme.type == "dark"):
+    colors= ["#000000FF","#421755FF"]
+else:
+    colors= ["#FFFFFFFF","#E3CDEDFF"]
 
 # 2. Create the colormap object
 # The colors are automatically spaced evenly from 0 to 1
@@ -388,7 +406,7 @@ styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Spe
 # if user-added file, don't apply gradient to parameter columns
 styled_df = styled_df.apply(lambda x: ['background-color: transparent' if x['line'] not in lines.keys() else '' for i in x], axis=1)
 event = st.dataframe(styled_df, width='stretch', on_select='rerun', selection_mode='multi-row', 
-                     column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None, 
+                     column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None, 'Luminosity': None,
                                     "line": None, "Int_Flux": st.column_config.NumberColumn("Integrated Flux (erg/s/cm^2)",format="%.2e"), "SpectralType": st.column_config.TextColumn("Spectral Type") ,
                                     "Mdot": st.column_config.NumberColumn("Mdot (Msun/yr)", format="%.2f"), "Tmax": st.column_config.NumberColumn("Tmax (K)", format="%.0f"), "Rin": st.column_config.NumberColumn("Rin (R*)", format="%.1f"), "Width": st.column_config.NumberColumn("Width (R*)", format="%.1f"), "Inclination": st.column_config.NumberColumn("Inclination (deg)", format="%.0f"), "Abundance": st.column_config.TextColumn("Abundance")})
 # st.session_state.data.style.format({'Int_Flux': "{:.2E}"})
@@ -403,16 +421,17 @@ event = st.dataframe(styled_df, width='stretch', on_select='rerun', selection_mo
 # all_data = pd.DataFrame()
 # st.dataframe(st.session_state.data)
 # st.dataframe(st.session_state.all_data)
-normalize_flux = st.checkbox('Normalize Flux', value=False, help='If checked, the flux will be normalized so the continuum level has a value of 1.')
+# normalize_flux = st.checkbox('Normalize Flux', value=False, help='If checked, the flux will be normalized so the continuum level has a value of 1.')
+yaxis = st.pills('What do you want to plot on the y-axis?', ['Flux', "Normalized Flux", "Luminosity"], key='yaxis', help='''Select whether to plot flux, flux normalized to the continuum, or luminosity on the y-axis. \n If comparing against observations, it is recommended to plot either luminosity or normalized flux.''', default='Flux')
 hide_legend = st.checkbox('Hide Legend', value=False, help='If checked, the legend will be hidden from the plot.')
-
+# print(yaxis)
 
 
 def get_flux_data():
     rows = event.selection.rows
     filtered_df = st.session_state.data.iloc[rows]
     # st.dataframe(filtered_df)
-    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Luminosity':[], 'Nflux':[], 'Label':[]})
 
     # for row in st.session_state.data.itertuples():
     for row in filtered_df.itertuples():
@@ -459,7 +478,8 @@ def get_flux_data():
         # profdata = load_data(row.Filename,row.SpectralType,row.line)
         vel = row.Velocity
         fnu = row.Flux
-        pandas_data = pd.DataFrame({'Velocity':vel, 'Flux':fnu})
+        luminosity = row.Luminosity
+        pandas_data = pd.DataFrame({'Velocity':vel, 'Flux':fnu, 'Luminosity':luminosity})
         # print(profdata)
         # pandas_data = profdata.to_pandas()
         pandas_data['Nflux'] = row.Nflux
@@ -490,9 +510,12 @@ def get_flux_data():
 get_flux_data()
 # st.session_state.data.int_flux = int_fluxes
 
-if normalize_flux:
+if yaxis == 'Normalized Flux':
     flux_label = 'Normalized Fν'
     flux_param = 'Nflux'
+elif yaxis == 'Luminosity':
+    flux_label = r'Luminosity (erg/s)'
+    flux_param = 'Luminosity'
 else:
     flux_label = r'Fν (erg/s/cm²/Hz)'
     flux_param = 'Flux'

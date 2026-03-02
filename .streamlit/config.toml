@@ -1,0 +1,12 @@
+[theme]
+
+
+[theme.light]
+base = "light"
+primaryColor = "#5c12a1"
+font = "Atkinson Hyperlegible Next"
+
+[theme.dark]
+base = "dark"
+primaryColor = "#b889e5"
+font = "Atkinson Hyperlegible Next"
