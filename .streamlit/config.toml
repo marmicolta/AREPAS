@@ -1,12 +1,38 @@
 [theme]
 
 
+[[theme.fontFaces]]
+family="atkinsonhyperlegible"
+url="app/static/AtkinsonHyperlegibleNext-Regular.otf"
+style="normal"
+weight=400
+[[theme.fontFaces]]
+family="atkinsonhyperlegible"
+url="app/static/AtkinsonHyperlegibleNext-Bold.otf"
+style="normal"
+weight=700
+[[theme.fontFaces]]
+family="atkinsonhyperlegible"
+url="app/static/AtkinsonHyperlegibleNext-RegularItalic.otf"
+style="italic"
+weight=400
+[[theme.fontFaces]]
+family="atkinsonhyperlegible"
+url="app/static/AtkinsonHyperlegibleNext-BoldItalic.otf"
+style="italic"
+weight=700
+
+
+
 [theme.light]
 base = "light"
 primaryColor = "#5c12a1"
-font = "Atkinson Hyperlegible Next"
+font = "atkinsonhyperlegible"
 
 [theme.dark]
 base = "dark"
 primaryColor = "#b889e5"
-font = "Atkinson Hyperlegible Next"
+font = "atkinsonhyperlegible"
+
+[server]
+enableStaticServing = true

@@ -201,14 +201,14 @@ line_centers = {'h23':656.279, \
 
 # Create an empty dataframe on first page load, will skip on page reloads
 if 'data' not in st.session_state:
-    data = pd.DataFrame({'line':[], 'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Luminosity':[],'Nflux':[], 'Label':[], 'Filename':[]})
+    data = pd.DataFrame({'line':[], 'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Fnu':[], 'Flam':[], 'Luminosity':[],'Nflux':[], 'Label':[], 'Filename':[]})
     st.session_state.data = data
 
 # --- button to clear the dataframe ---
 def clear_data():
     print(st.session_state.data)
-    st.session_state.data = pd.DataFrame({'line':[],'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Flux':[], 'Luminosity':[],'Nflux':[], 'Label':[], 'Filename':[]})
-    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Nflux':[], 'Label':[]})
+    st.session_state.data = pd.DataFrame({'line':[],'Line':[], 'Mdot':[],'Tmax':[],'Rin':[], 'Width':[], 'Inclination':[], 'Abundance':[], "SpectralType":[], "Int_Flux":[], "Velocity":[], 'Fnu':[], 'Flam':[], 'Luminosity':[],'Nflux':[], 'Label':[], 'Filename':[]})
+    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flam':[], 'Nflux':[], 'Label':[]})
     print(st.session_state.data)
 st.button('Clear Data', on_click=clear_data, help='Clears all selected model parameters and plotted data.')
 
@@ -336,9 +336,9 @@ with st.sidebar:
     # print('radius', radius, radius.unit)
     # luminosity = 4*np.pi*radius**2*(fnu-f_cont) # should be flux above the continuum!
   
-    flb_res = ( (fnu-f_cont) * (u.erg/u.s/u.cm**2/u.Hz) * c.to(u.AA/u.s) / (wave)**2  ).to(u.erg/u.s/u.cm**2/u.AA) 
+    flb_res = ( (fnu-f_cont) * (u.erg/u.s/u.cm**2/u.Hz) * c.to(u.AA/u.s) / (wave)**2).to(u.erg/u.s/u.cm**2/u.AA) 
     # print('res',flb_res)
-    luminosity = 4*np.pi*radius**2* (flb_res )
+    luminosity = 4*np.pi*radius**2* (flb_res)
     # print('lum', luminosity/L_sun.cgs)
 
     # print('radius', radius)
@@ -441,7 +441,7 @@ styled_df = styled_df.background_gradient(cmap=custom_cmap, axis=0, subset=['Spe
 # if user-added file, don't apply gradient to parameter columns
 styled_df = styled_df.apply(lambda x: ['background-color: transparent' if x['line'] not in lines.keys() else '' for i in x], axis=1)
 event = st.dataframe(styled_df, width='stretch', on_select='rerun', selection_mode='multi-row', 
-                     column_config={"Label": None, "Filename": None, "Velocity": None, "Flux": None, "Nflux": None, 'Luminosity': None,
+                     column_config={"Label": None, "Filename": None, "Velocity": None, "Flam": None, "Fnu": None, "Nflux": None, 'Luminosity': None,
                                     "line": None, "Int_Flux": st.column_config.NumberColumn("Integrated Flux (erg/s/cm^2)",format="%.2e"), "SpectralType": st.column_config.TextColumn("Spectral Type") ,
                                     "Mdot": st.column_config.NumberColumn("Mdot (Msun/yr)", format="%.2f"), "Tmax": st.column_config.NumberColumn("Tmax (K)", format="%.0f"), "Rin": st.column_config.NumberColumn("Rin (R*)", format="%.1f"), "Width": st.column_config.NumberColumn("Width (R*)", format="%.1f"), "Inclination": st.column_config.NumberColumn("Inclination (deg)", format="%.0f"), "Abundance": st.column_config.TextColumn("Abundance")})
 # st.session_state.data.style.format({'Int_Flux': "{:.2E}"})
@@ -466,7 +466,8 @@ def get_flux_data():
     rows = event.selection.rows
     filtered_df = st.session_state.data.iloc[rows]
     # st.dataframe(filtered_df)
-    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flux':[], 'Luminosity':[], 'Nflux':[], 'Label':[]})
+    # 'Velocity':[], 'Flam':[], 'Nflux':[], 'Label':[]
+    st.session_state.all_data = pd.DataFrame({'Velocity':[], 'Flam':[], 'Luminosity':[], 'Nflux':[], 'Label':[]})
 
     # for row in st.session_state.data.itertuples():
     for row in filtered_df.itertuples():
@@ -514,7 +515,7 @@ def get_flux_data():
         vel = row.Velocity
         flb = row.Flam   
         luminosity = row.Luminosity
-        pandas_data = pd.DataFrame({'Velocity':vel, 'Flux':flb, 'Luminosity':luminosity})
+        pandas_data = pd.DataFrame({'Velocity':vel, 'Flam':flb, 'Luminosity':luminosity})
         # print(profdata)
         # pandas_data = profdata.to_pandas()
         pandas_data['Nflux'] = row.Nflux
@@ -548,12 +549,15 @@ get_flux_data()
 if yaxis == 'Normalized Flux':
     flux_label = 'Normalized Fλ'
     flux_param = 'Nflux'
+    flux_axis = alt.Axis(format=".0f")
 elif yaxis == 'Luminosity':
     flux_label = r'Luminosity (erg/s)'
     flux_param = 'Luminosity'
+    flux_axis = alt.Axis(format=".1e")
 else:
     flux_label = r'Fλ (erg/s/cm²/Å)'
-    flux_param = 'Flux'
+    flux_param = 'Flam'
+    flux_axis = alt.Axis(format=".1e")
 
 # print(st.session_state.all_data)
 
@@ -572,7 +576,7 @@ if not st.session_state.all_data.empty:
         legend=alt.Legend(title="Models", labelLimit=400, direction="vertical", orient="right", columns=1)
     chart1 = alt.Chart(st.session_state.all_data).mark_point().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
-        y=alt.Y(flux_param, axis=alt.Axis(format=".1e"), title=flux_label),
+        y=alt.Y(flux_param, axis=flux_axis, title=flux_label),
         color=alt.Color('Label:N', legend=legend, scale=alt.Scale(scheme='observable10')),
         tooltip=['Velocity', flux_param, 'Label'],
         opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
@@ -585,7 +589,7 @@ if not st.session_state.all_data.empty:
 
     chart2 = alt.Chart(st.session_state.all_data).mark_line().encode(
         x=alt.X('Velocity', title='Velocity (km/s)'),
-        y=alt.Y(flux_param, axis=alt.Axis(format=".1e"), title=flux_label),
+        y=alt.Y(flux_param, axis=flux_axis, title=flux_label),
         color=alt.Color('Label:N', scale=alt.Scale(scheme='observable10')),
         opacity=alt.condition(selection, alt.value(1), alt.value(0.0) ),
         ).properties(
