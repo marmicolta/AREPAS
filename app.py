@@ -19,7 +19,11 @@ import matplotlib.colors as mcolors
 st.set_page_config(layout="wide",
     page_title="AREPAS",
     page_icon="🫓",
-    initial_sidebar_state="expanded")
+    initial_sidebar_state="expanded",
+    menu_items={
+    'Report a bug': "https://github.com/marmicolta/AREPAS/issues",
+    'About':"If you have any feature requests or find any bugs, please report them on the [GitHub](https://github.com/marmicolta/AREPAS/issues) page or contact us at micoltam [at] umich [dot] edu or kgozman [at] umich [dot] edu"""
+  })
 
 
 # --------- Dropbox API setup ---------- #
