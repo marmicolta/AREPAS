@@ -408,7 +408,7 @@ get_flux_data()
 if yaxis == 'Normalized Flux':
     flux_label = 'Normalized Fλ'
     flux_param = 'Nflux'
-    flux_axis = alt.Axis(format=".0f")
+    flux_axis = alt.Axis(format=".1f")
 elif yaxis == 'Luminosity':
     flux_label = r'Luminosity (erg/s)'
     flux_param = 'Luminosity'
