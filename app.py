@@ -127,13 +127,13 @@ with st.expander("How to use this app"):
     st.markdown("### Instructions:")
     st.markdown("1. Use the sidebar to select model parameters.")
     st.markdown("2. Click 'Submit' to add the selected model to the dataframe. \n")
-    st.markdown("""3. To upload your own data, click 'Browse files' in the sidebar and select a CSV file where the first three columns are velocity (in km/s), flux (in erg/s/cm²/Hz), and distance (in pc). Other columns will be ignored.
-                The distance column needs to just have the first cell with the distance, all other cells may be left blank (they will be ignored). Then click 'Submit' to add it to the dataframe. \n""")
+    st.markdown("""3. To upload your own data, click 'Browse files' in the sidebar and select a CSV file where the first three columns are velocity (in km/s), flux (in erg/s/cm²/Å), and distance (in pc). Other columns will be ignored.
+                The distance column needs to just have the first cell with the distance, all other cells may be left blank (they will be ignored), it will be used to compute the line luminosity, as calculated by L=4πd²F, if needed. Then click 'Submit' to add it to the dataframe. \n""")
     st.markdown("""4. Select *one* row in the data table by clicking the checkbox in the first column to visualize the corresponding line profiles. Select *all* rows by clicking the checkbox in the header of the first column. 
-                    \n      * Use the buttons to choose what to plot on the y-axis. 'Flux' will be the flux in erg/s/cm²/Hz. 'Normalized Flux' will be flux normalized to the continuum.
-                 "Luminosity" will be the luminosity in erg/s, as calculated by L=4πR²F, where F is the flux at the surface of the star and R is the radius of a star of the specified spectral type. 
+                    \n      * Use the buttons to choose what to plot on the y-axis. 'Flux' will be the flux in erg/s/cm²/Å. 'Normalized Flux' will be flux normalized to the continuum.
+                 "Luminosity" will be the luminosity in erg/s. For the models, this is calculated by L=4πR²F, where F is the flux at the surface of the star and R is the radius of a star of the specified spectral type. 
                 If comparing with observed data, it is recommended to use normalized flux or luminosity values as the model fluxes are calculated at the surface of the star.\n""")
-    st.markdown("5. Use the 'Clear Data' button to reset selections.""")
+    st.markdown("5. Use the 'Clear Data' button to reset selections.")
     st.markdown("The plot has an interactive legend and zooming capabilities. Click on legend entries to toggle visibility of specific models. Click and drag on the plot area to zoom in on regions of interest. Double-click to reset the zoom.")
     st.markdown('You can change the color scheme of the app by toggling between light and dark mode in the settings (top-right corner hamburger menu -> Settings). The color gradients in the dataframe will adjust accordingly to help differentiate between parameter values.')
     st.markdown("To download the raw data for all the models you have selected, click on the graph symbol at the top-right corner of the plot and then click the down arrow in the top-right corner that will let you 'Download as CSV'.")
