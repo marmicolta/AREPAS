@@ -234,7 +234,8 @@ def add_df(user_data=False):
             "SpectralType":[st.session_state.spectral_type],
             "Int_Flux":[st.session_state.Int_Flux],
             "Velocity":[st.session_state.vel],
-            "Flux":[st.session_state.fnu],
+            "Fnu":[st.session_state.fnu],
+            "Flam":[st.session_state.Flam],
             "Luminosity":[st.session_state.Luminosity],
             "Nflux":[st.session_state.Nflux],
             "Label":[st.session_state.label],
@@ -302,25 +303,46 @@ with st.sidebar:
     st.session_state.filename = file_name
     # Load the data
     profdata = load_data(file_name,spectral_type,line)
-    vel = profdata['Velocity'].data
-    fnu = profdata['Flux'].data
+    vel = profdata['Velocity'].data # Km/s
+    fnu = profdata['Flux'].data # erg/cm^2/s/Hz at the surface of the star
     # luminosity = profdata['Luminosity'].data
     st.session_state.vel = vel
     st.session_state.fnu = fnu
     # st.session_state.Luminosity = luminosity
+    # print('og flux',fnu)
     v1,v2 = vel[0], vel[-1]
     f1,f2 = fnu[0],fnu[-1]
 
     m = (f2-f1)/(v2-v1)
     f_cont = m * (vel-v1) + f1
-
+    # print('cont',f_cont)
+    # print(c.to('km/s'))
+    # print(line_centers[line])
+    wave = (vel*(u.km/u.s)/c.to('km/s')  + 1)*(line_centers[line]*u.nm).to(u.AA)
+    flb = fnu * (u.erg/u.s/u.cm**2/u.Hz) * c.to(u.AA/u.s) / ((line_centers[line]*u.nm).to(u.AA))**2
+    flb = flb.to(u.erg/u.s/u.cm**2/u.AA)
+    #  "Flam":[st.session_state.flam],
+    st.session_state.Flam = flb.value
+    # print('wave', wave)
+   # print(wave)
+    # print(flb.to(u.erg/u.s/u.cm**2/u.AA))
 
     # get radius of star based on spectral type from file
     stellar_params = pd.read_csv('https://raw.githubusercontent.com/marmicolta/database_magneto_models/refs/heads/main/model_stellar_parameters.csv')
     # radius = float(stellar_params.loc[stellar_params['SpT'] == spectral_type]['R'])
     radius = float(stellar_params.iloc[np.where(stellar_params['SpT'] == spectral_type)[0][0]]['R'])*u.Rsun
+    # print('radius', radius, radius.unit)
     radius = radius.to(u.cm)
-    luminosity = 4*np.pi*radius**2*(fnu-f_cont) # should be flux above the continuum!
+    # print('radius', radius, radius.unit)
+    # luminosity = 4*np.pi*radius**2*(fnu-f_cont) # should be flux above the continuum!
+  
+    flb_res = ( (fnu-f_cont) * (u.erg/u.s/u.cm**2/u.Hz) * c.to(u.AA/u.s) / (wave)**2  ).to(u.erg/u.s/u.cm**2/u.AA) 
+    # print('res',flb_res)
+    luminosity = 4*np.pi*radius**2* (flb_res )
+    # print('lum', luminosity/L_sun.cgs)
+
+    # print('radius', radius)
+
     # print("MODEL", luminosity, L_sun.cgs, luminosity/L_sun.cgs)
     st.session_state.Luminosity = luminosity/L_sun.cgs # convert to Lsun
     st.session_state.Nflux = fnu/f_cont
@@ -347,31 +369,31 @@ def add_user_file():
 
 
         st.session_state.vel = user_data['Velocity']
-        st.session_state.fnu = user_data['Flux']/10
+        st.session_state.Flam = user_data['Flux'] #erg/s/cm^2/AA
         dist = user_data['Distance'][0]*u.pc
         dist = dist.to(u.cm)    
 
         vel = st.session_state.vel
-        fnu = st.session_state.fnu
+        flb = st.session_state.Flam
         v1,v2 = vel[0], vel[-1]
-        f1,f2 = fnu[0],fnu[-1]
+        f1,f2 = flb[0],flb[-1]
 
         m = (f2-f1)/(v2-v1)
         f_cont = m * (vel-v1) + f1
-        print(dist**2 * 4 * np.pi * (user_data['Flux']-f_cont))
-        print(L_sun.cgs)
+        # print(dist**2 * 4 * np.pi * (user_data['Flux']-f_cont))
+        # print(L_sun.cgs)
         st.session_state.Luminosity = (dist**2 * 4 * np.pi * (user_data['Flux']-f_cont))/L_sun.cgs #should be flux above the continuum!
-        st.session_state.Nflux = fnu/f_cont
+        st.session_state.Nflux = flb/f_cont
 
         # fig = plt.figure()
-        # plt.plot(vel, fnu)
+        # plt.plot(vel, flb)
         # plt.plot(vel, f_cont)
         # plt.savefig("/Users/kgozman/Downloads/test.png")
 
         # st.session_state.Int_Flux = np.nan
         # add_df()
 
-        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[None], 'Width':[None], 'Inclination':[np.nan], 'Abundance':[""], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flux':[user_data['Flux']], 'Luminosity':[st.session_state.Luminosity], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
+        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame({'line':[uploaded_file.name], 'Line':[uploaded_file.name], 'Mdot':[np.nan],'Tmax':[np.nan],'Rin':[None], 'Width':[None], 'Inclination':[np.nan], 'Abundance':[""], "SpectralType":[np.nan], "Int_Flux":[np.nan], "Velocity":[user_data['Velocity']], 'Flam':[user_data['Flux']], 'Luminosity':[st.session_state.Luminosity], 'Nflux':[st.session_state.Nflux], 'Label':[uploaded_file.name], 'Filename':[uploaded_file.name]})], ignore_index=True)
 
 # check that file has first 2 columns that are numerical
 if uploaded_file is not None:
@@ -490,9 +512,9 @@ def get_flux_data():
         # print(row)
         # profdata = load_data(row.Filename,row.SpectralType,row.line)
         vel = row.Velocity
-        fnu = row.Flux
+        flb = row.Flam   
         luminosity = row.Luminosity
-        pandas_data = pd.DataFrame({'Velocity':vel, 'Flux':fnu, 'Luminosity':luminosity})
+        pandas_data = pd.DataFrame({'Velocity':vel, 'Flux':flb, 'Luminosity':luminosity})
         # print(profdata)
         # pandas_data = profdata.to_pandas()
         pandas_data['Nflux'] = row.Nflux
@@ -524,13 +546,13 @@ get_flux_data()
 # st.session_state.data.int_flux = int_fluxes
 
 if yaxis == 'Normalized Flux':
-    flux_label = 'Normalized Fν'
+    flux_label = 'Normalized Fλ'
     flux_param = 'Nflux'
 elif yaxis == 'Luminosity':
     flux_label = r'Luminosity (erg/s)'
     flux_param = 'Luminosity'
 else:
-    flux_label = r'Fν (erg/s/cm²/Hz)'
+    flux_label = r'Fλ (erg/s/cm²/Å)'
     flux_param = 'Flux'
 
 # print(st.session_state.all_data)
