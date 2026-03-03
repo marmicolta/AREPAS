@@ -128,7 +128,7 @@ with st.expander("How to use this app"):
     st.markdown("1. Use the sidebar to select model parameters.")
     st.markdown("2. Click 'Submit' to add the selected model to the dataframe. \n")
     st.markdown("""3. To upload your own data, click 'Browse files' in the sidebar and select a CSV file where the first three columns are velocity (in km/s), flux (in erg/s/cm²/Å), and distance (in pc). Other columns will be ignored.
-                The distance column needs to just have the first cell with the distance, all other cells may be left blank (they will be ignored), it will be used to compute the line luminosity, as calculated by L=4πd²F, if needed. Then click 'Submit' to add it to the dataframe. \n""")
+                The distance column needs to just have the first cell with the distance, all other cells may be left blank (they will be ignored); it will be used to compute the line luminosity, as calculated by L=4πd²F, if needed. Then click 'Submit' to add it to the dataframe. \n""")
     st.markdown("""4. Select *one* row in the data table by clicking the checkbox in the first column to visualize the corresponding line profiles. Select *all* rows by clicking the checkbox in the header of the first column. 
                     \n      * Use the buttons to choose what to plot on the y-axis. 'Flux' will be the flux in erg/s/cm²/Å. 'Normalized Flux' will be flux normalized to the continuum.
                  "Luminosity" will be the luminosity in erg/s. For the models, this is calculated by L=4πR²F, where F is the flux at the surface of the star and R is the radius of a star of the specified spectral type. 
