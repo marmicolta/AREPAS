@@ -239,7 +239,7 @@ with st.sidebar:
         st.session_state.abund = ""
         # st.form_submit_button('Submit my picks')
 
-    spectral_type = st.selectbox('Select Spectral Type', ['M1','M3','M5','K2','K5','K7'], key='spectral_type', help='The spectral type of the star.')
+    spectral_type = st.selectbox('Select Spectral Type', ['K2','K5','K7', 'M1','M3','M5'], key='spectral_type', help='The spectral type of the star.')
     #                     disabled=True)
 
     abundance = abund
