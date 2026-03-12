@@ -1,26 +1,31 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
 cff-version: 1.2.0
-title: "AREPAS: A Resource for Exploring Protostellar Accretion Systems"
+title: >-
+  AREPAS: A Resource for Exploring Protostellar Accretion
+  Systems
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
 type: software
-version: 1.0.0
-date-released: 2026-03-01
-
 authors:
-
-  - family-names: Micolta
-    given-names: Marbely
+  - given-names: Marbely
+    family-names: Micolta
+    email: micoltam@umich.edu
+    orcid: 'https://orcid.org/0000-0001-8022-4378'
     affiliation: University of Michigan
-    orcid: https://orcid.org/0000-0001-8022-4378
-
-  - family-names: Gozman
-    given-names: Katya
+  - given-names: Katya
+    family-names: Gozman
     affiliation: University of Michigan
-    orcid: https://orcid.org/0000-0003-2294-4187
-
-license: BSD 3-Clause
-repository-code: https://github.com/marmicolta/AREPAS
-
+    orcid: 'https://orcid.org/0000-0003-2294-4187'
+    email: kgozman@umich.edu
+repository-code: 'https://github.com/marmicolta/AREPAS'
+url: 'https://arepas.streamlit.app/'
 keywords:
   - magnetospheric accretion
   - t tauri stars
   - pre-main sequence stars
   - astrophysics
+license: BSD-3-Clause
+date-released: '2026-03-01'
