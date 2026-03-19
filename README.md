@@ -3,4 +3,4 @@ Viewing Tool for the [Open Library of Magnetospheric Accretion Models for T Taur
 
 Explore the app! [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://arepas.streamlit.app)
 
-If you use this app for your research, please cite the data release I paper (in prep). If you have any questions or want to contribute, please reach out to [Marbely Micolta](https://sites.google.com/umich.edu/marbelymicolta?usp=sharing) or [Katya Gozman](https://kgozman6159.github.io/)!
+If you use this app for your research, please cite the [data release I paper](https://iopscience.iop.org/article/10.3847/2515-5172/ae5241). If you have any questions or want to contribute, please reach out to [Marbely Micolta](https://sites.google.com/umich.edu/marbelymicolta?usp=sharing) or [Katya Gozman](https://kgozman6159.github.io/)!
